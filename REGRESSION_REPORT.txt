@@ -1,0 +1,13 @@
+Ver.1.0.44 RELEASE RC regression status
+
+STATIC CHECK (assistant environment): PASS
+- functions: 127 / unique 127
+- save schema: v4
+- 50,000 floor safe-path simulation: PASS
+- issues: none
+
+GODOT 4.7.2 RUNTIME (user Windows environment, Ver.1.0.43 FINAL DEVICE RC): PASS ALL
+SHINOBI_REGRESSION PASS ALL: 保存契約 / 格子検証 / エンティティ復旧 / 階段保存 / 縛影1-8 / 満腹 / 帰還報酬 / 盗み / アイテム配置 / 階段到達 / 難易度曲線 / 遠距離射線 / アイテム一覧 / ボス門 / 配置安全 / ボス復旧 / 商店復旧 / 影分身30歩 / 広告OFF / 百階契約 / 忍気研究 / 日本語字形
+
+Ver.1.0.44は1.0.43からゲームロジック変更なし。変更はバージョン/リリース資料/実機確認記録のみ。
+Assistant containerにはGodot executableがないため、1.0.44自体のGodot runtime再実行は未実施。

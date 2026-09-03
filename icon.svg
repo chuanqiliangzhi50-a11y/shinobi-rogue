@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="180" fill="#111820"/>
+  <circle cx="512" cy="500" r="300" fill="#202b36" stroke="#d7bd62" stroke-width="28"/>
+  <path d="M300 500c0-170 95-286 212-286s212 116 212 286v212H300z" fill="#0b0f14"/>
+  <path d="M350 455c80-86 244-86 324 0l-54 120H404z" fill="#242f3a"/>
+  <path d="M407 506c58-34 152-34 210 0-24 72-66 108-105 108s-81-36-105-108z" fill="#c69e7b"/>
+  <path d="M420 518c24-15 52-20 78-13-13 25-35 39-63 39-9-7-13-16-15-26zm184 0c-24-15-52-20-78-13 13 25 35 39 63 39 9-7 13-16 15-26z" fill="#0d1117"/>
+  <rect x="395" y="332" width="234" height="78" rx="28" fill="#26333f" stroke="#d7bd62" stroke-width="14"/>
+  <text x="512" y="392" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="56" fill="#f0dc89">忍</text>
+  <path d="M645 280l175-110 34 55-172 118z" fill="#d7bd62"/>
+  <path d="M676 342l174 120-36 53-179-116z" fill="#8d7633"/>
+</svg>

@@ -1,0 +1,11 @@
+{
+  "version": "1.0.45",
+  "status": "PASS",
+  "functions": 127,
+  "unique_functions": 127,
+  "save_schema": 4,
+  "monte_carlo_floor_generations": 50000,
+  "monte_carlo_min_safe_path_cells": 37,
+  "issues": [],
+  "godot_engine_execution": "NOT RUN by this Python checker"
+}

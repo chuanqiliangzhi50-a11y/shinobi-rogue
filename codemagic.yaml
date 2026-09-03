@@ -1,0 +1,98 @@
+workflows:
+  shinobi-ios-preflight:
+    name: Shinobi Rogue iOS preflight
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      vars:
+        GODOT_VERSION: "4.7.2"
+    scripts:
+      - name: Install Godot and export templates
+        script: |
+          set -euo pipefail
+          curl -L -o /tmp/godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          GODOT_APP="$(find /tmp/godot -maxdepth 2 -name 'Godot*.app' | head -1)"
+          GODOT_BIN="$GODOT_APP/Contents/MacOS/Godot"
+          echo "GODOT_BIN=$GODOT_BIN" >> "$CM_ENV"
+          curl -L -o /tmp/templates.tpz "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          cp -R /tmp/templates/templates/. "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable/"
+          "$GODOT_BIN" --version
+      - name: Godot regression
+        script: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --path . -- --shinobi-regression
+
+  shinobi-ios-appstore:
+    name: Shinobi Rogue App Store build
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    integrations:
+      app_store_connect: ShinobiRogue-AppStore
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: $IOS_BUNDLE_ID
+      vars:
+        GODOT_VERSION: "4.7.2"
+        IOS_BUNDLE_ID: "REPLACE_WITH_FINAL_BUNDLE_ID"
+        APPLE_TEAM_ID: "REPLACE_WITH_10_CHAR_TEAM_ID"
+    scripts:
+      - name: Install Godot and export templates
+        script: |
+          set -euo pipefail
+          curl -L -o /tmp/godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          GODOT_APP="$(find /tmp/godot -maxdepth 2 -name 'Godot*.app' | head -1)"
+          GODOT_BIN="$GODOT_APP/Contents/MacOS/Godot"
+          echo "GODOT_BIN=$GODOT_BIN" >> "$CM_ENV"
+          curl -L -o /tmp/templates.tpz "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          cp -R /tmp/templates/templates/. "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable/"
+      - name: Prepare iOS preset
+        script: |
+          set -euo pipefail
+          cp export_presets.ios.template.cfg export_presets.cfg
+          python3 - <<'PY2'
+          import os, pathlib
+          p=pathlib.Path('export_presets.cfg')
+          s=p.read_text()
+          s=s.replace('REPLACE_WITH_10_CHAR_TEAM_ID', os.environ['APPLE_TEAM_ID'])
+          s=s.replace('com.example.shinobirogue', os.environ['IOS_BUNDLE_ID'])
+          p.write_text(s)
+          PY2
+      - name: Godot regression
+        script: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --path . -- --shinobi-regression
+      - name: Export Xcode project
+        script: |
+          set -euo pipefail
+          mkdir -p build/ios
+          "$GODOT_BIN" --headless --path . --export-release "iOS" "build/ios/ShinobiRogue.xcodeproj"
+      - name: Fetch signing files
+        script: |
+          set -euo pipefail
+          app-store-connect fetch-signing-files "$IOS_BUNDLE_ID" --type IOS_APP_STORE --create
+      - name: Install signing certificate
+        script: |
+          keychain initialize
+      - name: Apply provisioning profiles
+        script: |
+          xcode-project use-profiles --project "build/ios/ShinobiRogue.xcodeproj"
+      - name: Build IPA
+        script: |
+          set -euo pipefail
+          xcode-project build-ipa --project "build/ios/ShinobiRogue.xcodeproj" --scheme "ShinobiRogue"
+    artifacts:
+      - build/ios/**/*.ipa
+      - build/ios/**/*.xcarchive
+      - build/ios/**
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false

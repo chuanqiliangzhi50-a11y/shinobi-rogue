@@ -1,0 +1,9 @@
+{
+  "version": "1.0.42",
+  "channel": "RELEASE RC2",
+  "functions": 127,
+  "unique": 127,
+  "ads_enabled": false,
+  "has_100f_regression": true,
+  "save_schema_v4": true
+}

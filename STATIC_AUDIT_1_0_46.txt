@@ -1,0 +1,5 @@
+Ver.1.0.46 static audit
+functions=127 unique=127
+save_schema=4
+issues=[]
+Godot runtime not executed in assistant environment.
