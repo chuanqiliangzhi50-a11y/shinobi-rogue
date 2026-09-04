@@ -1,3 +1,11 @@
+# Ver.1.0.48 CODEMAGIC FIX RC
+
+- Fixed Codemagic clean-checkout failure: `preload("res://ui_glyphs.png")` could be parsed before Godot generated the imported PNG cache.
+- Glyph texture is now lazily loaded only in normal play; headless regression does not require presentation assets.
+- Added `Import project resources` to both Codemagic workflows.
+- Reduced preflight max duration to 15 minutes so future hangs fail faster.
+- Gameplay logic and save schema v4 unchanged.
+
 # Ver.1.0.46 VISUAL/CI RC
 
 - Kept game logic and save schema v4 unchanged.

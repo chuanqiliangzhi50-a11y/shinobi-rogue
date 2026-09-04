@@ -2,7 +2,7 @@ workflows:
   shinobi-ios-preflight:
     name: Shinobi Rogue iOS preflight
     instance_type: mac_mini_m2
-    max_build_duration: 30
+    max_build_duration: 15
     environment:
       vars:
         GODOT_VERSION: "4.7.2"
@@ -20,6 +20,10 @@ workflows:
           unzip -q /tmp/templates.tpz -d /tmp/templates
           cp -R /tmp/templates/templates/. "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable/"
           "$GODOT_BIN" --version
+      - name: Import project resources
+        script: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --editor --path . --quit-after 2
       - name: Godot regression
         script: |
           set -euo pipefail
@@ -64,6 +68,10 @@ workflows:
           s=s.replace('com.example.shinobirogue', os.environ['IOS_BUNDLE_ID'])
           p.write_text(s)
           PY2
+      - name: Import project resources
+        script: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --editor --path . --quit-after 2
       - name: Godot regression
         script: |
           set -euo pipefail

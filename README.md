@@ -1,3 +1,12 @@
+# 忍道 - SHINOBI ROGUE Ver.1.0.48 CODEMAGIC FIX RC
+
+Codemagic clean-checkout regression fix release. Game rules/save schema are unchanged from Ver.1.0.47.
+
+- Avoids parsing-time preload of `ui_glyphs.png` during clean CI regression.
+- Loads the glyph texture only for normal gameplay, after regression-mode early exit.
+- Adds a dedicated Godot resource-import step before regression/export.
+- Keeps save schema v4 and existing gameplay logic.
+
 # 忍道 - SHINOBI ROGUE Ver.1.0.43 FINAL DEVICE RC
 
 App Storeネイティブ化直前の最終iPhoneスモークテスト候補版。

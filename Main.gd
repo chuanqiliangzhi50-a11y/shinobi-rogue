@@ -1,7 +1,7 @@
 extends Node2D
 
-const VERSION := "1.0.47"
-const RELEASE_CHANNEL := "CODEMAGIC READY"
+const VERSION := "1.0.48"
+const RELEASE_CHANNEL := "CODEMAGIC FIX RC"
 const DEVELOPMENT_UI_ENABLED := false
 const ADS_ENABLED := false # Initial App Store release: ad SDK not integrated yet.
 const MAP_W := 31
@@ -91,7 +91,7 @@ var known_enemies: Dictionary = {}
 var death_log: Array = []
 var self_test_mode := false
 var regression_all_pass := false
-var ui_glyph_texture: Texture2D = preload("res://ui_glyphs.png")
+var ui_glyph_texture: Texture2D = null
 const UI_GLYPH_CELL := 40.0
 const UI_GLYPH_BASE := 32.0
 const PORTRAIT_LAYOUT_ENABLED := true
@@ -102,11 +102,14 @@ func _ready() -> void:
 	self_test_mode = "--shinobi-regression" in OS.get_cmdline_user_args()
 	if self_test_mode:
 		# Headless CI/preflight mode never reads or writes the player's real user:// saves.
+		# Do not load presentation-only PNG assets in regression mode: a clean CI checkout
+		# has not generated Godot's imported texture cache yet.
 		apply_permanent_stats()
 		debug_run_regression_suite()
 		print("SHINOBI_REGRESSION " + message)
 		get_tree().quit(0 if regression_all_pass else 2)
 		return
+	ui_glyph_texture = load("res://ui_glyphs.png") as Texture2D
 	load_meta()
 	apply_permanent_stats()
 	if load_run_state():
