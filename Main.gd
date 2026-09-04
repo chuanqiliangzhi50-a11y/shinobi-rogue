@@ -1,7 +1,7 @@
 extends Node2D
 
-const VERSION := "1.0.48"
-const RELEASE_CHANNEL := "CODEMAGIC FIX RC"
+const VERSION := "1.0.49"
+const RELEASE_CHANNEL := "CODEMAGIC HEADLESS FIX RC"
 const DEVELOPMENT_UI_ENABLED := false
 const ADS_ENABLED := false # Initial App Store release: ad SDK not integrated yet.
 const MAP_W := 31
@@ -517,6 +517,9 @@ const UI_GLYPH_MAP := {
 
 
 func draw_ui_text(pos: Vector2, text: String, _alignment: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT, _width: float = -1.0, font_size: int = 16, color: Color = Color.WHITE) -> void:
+	# Headless/self-test runs intentionally skip presentation assets. Never submit a null texture to CanvasItem.
+	if ui_glyph_texture == null:
+		return
 	# Bitmap glyph atlas: guarantees Japanese UI on Web/iPhone without relying on browser system fonts.
 	var x := pos.x
 	var y := pos.y - float(font_size) * 0.84
@@ -2456,7 +2459,9 @@ func debug_run_regression_suite() -> void:
 		save_run_state()
 	debug_last = " / ".join(results)
 	message = ("PASS ALL: " if regression_all_pass else "REGRESSION FAIL [%d]: " % failures.size()) + debug_last
-	queue_redraw()
+	# A redraw is useful in editor/debug UI, but headless CI has no glyph texture loaded.
+	if not self_test_mode:
+		queue_redraw()
 
 
 

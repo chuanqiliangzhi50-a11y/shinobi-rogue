@@ -1,4 +1,13 @@
-# 忍道 - SHINOBI ROGUE Ver.1.0.48 CODEMAGIC FIX RC
+# 忍道 - SHINOBI ROGUE Ver.1.0.49 CODEMAGIC HEADLESS FIX RC
+
+## Ver.1.0.49
+
+- Codemagic headless regressionで`ui_glyph_texture`がnullのまま描画される問題を防止。
+- `draw_ui_text()`にnull textureガードを追加。
+- headless self-test時は`queue_redraw()`を行わない。
+- Codemagic regressionは`SHINOBI_REGRESSION PASS ALL:`を必須化し、`ERROR:`行があればビルドを失敗させる。
+- ゲームルール、save schema v4、広告OFF方針は変更なし。
+
 
 Codemagic clean-checkout regression fix release. Game rules/save schema are unchanged from Ver.1.0.47.
 

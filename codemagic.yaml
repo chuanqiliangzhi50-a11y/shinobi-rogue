@@ -27,7 +27,13 @@ workflows:
       - name: Godot regression
         script: |
           set -euo pipefail
-          "$GODOT_BIN" --headless --path . -- --shinobi-regression
+          LOG=/tmp/shinobi_regression.log
+          "$GODOT_BIN" --headless --path . -- --shinobi-regression 2>&1 | tee "$LOG"
+          grep -F "SHINOBI_REGRESSION PASS ALL:" "$LOG" >/dev/null
+          if grep -F "ERROR:" "$LOG" >/dev/null; then
+            echo "Unexpected Godot ERROR lines detected during regression." >&2
+            exit 3
+          fi
 
   shinobi-ios-appstore:
     name: Shinobi Rogue App Store build
@@ -75,7 +81,13 @@ workflows:
       - name: Godot regression
         script: |
           set -euo pipefail
-          "$GODOT_BIN" --headless --path . -- --shinobi-regression
+          LOG=/tmp/shinobi_regression.log
+          "$GODOT_BIN" --headless --path . -- --shinobi-regression 2>&1 | tee "$LOG"
+          grep -F "SHINOBI_REGRESSION PASS ALL:" "$LOG" >/dev/null
+          if grep -F "ERROR:" "$LOG" >/dev/null; then
+            echo "Unexpected Godot ERROR lines detected during regression." >&2
+            exit 3
+          fi
       - name: Export Xcode project
         script: |
           set -euo pipefail

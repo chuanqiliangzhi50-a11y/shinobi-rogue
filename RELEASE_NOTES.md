@@ -1,3 +1,21 @@
+# Ver.1.0.49 CODEMAGIC HEADLESS FIX RC
+
+## Purpose
+CodemagicのGodot regressionが終了自体は成功しても、headless描画で`Required object "p_texture" is null`を出していた問題を修正。
+
+## Changes
+- headless/self-testではUI glyph textureがnullでも描画APIを呼ばない安全ガードを追加。
+- regression self-test中の不要な`queue_redraw()`を抑止。
+- Codemagic CIで`SHINOBI_REGRESSION PASS ALL:`の出力を必須化。
+- regressionログに`ERROR:`が残る場合はCIを失敗させ、見かけ上のfinishedを防止。
+- versionを1.0.49 / iOS build 49へ同期。
+
+## Unchanged
+- ゲームルール
+- save schema v4
+- 初回版広告/トラッキングOFF
+- 既存iPhone縦画面UI
+
 # Ver.1.0.48 CODEMAGIC FIX RC
 
 - Fixed Codemagic clean-checkout failure: `preload("res://ui_glyphs.png")` could be parsed before Godot generated the imported PNG cache.
