@@ -1,4 +1,60 @@
 workflows:
+  shinobi-web-release:
+    name: Shinobi Rogue Web release
+    instance_type: mac_mini_m2
+    max_build_duration: 15
+    environment:
+      vars:
+        GODOT_VERSION: "4.7.2"
+    scripts:
+      - name: Install Godot and export templates
+        script: |
+          set -euo pipefail
+          curl -L -o /tmp/godot.zip "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          GODOT_APP="$(find /tmp/godot -maxdepth 2 -name 'Godot*.app' | head -1)"
+          GODOT_BIN="$GODOT_APP/Contents/MacOS/Godot"
+          echo "GODOT_BIN=$GODOT_BIN" >> "$CM_ENV"
+          curl -L -o /tmp/templates.tpz "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          cp -R /tmp/templates/templates/. "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.stable/"
+          "$GODOT_BIN" --version
+      - name: Import project resources
+        script: |
+          set -euo pipefail
+          "$GODOT_BIN" --headless --editor --path . --quit-after 2
+      - name: Godot regression
+        script: |
+          set -euo pipefail
+          LOG=/tmp/shinobi_regression.log
+          "$GODOT_BIN" --headless --path . -- --shinobi-regression 2>&1 | tee "$LOG"
+          grep -F "SHINOBI_REGRESSION PASS ALL:" "$LOG" >/dev/null
+          if grep -F "ERROR:" "$LOG" >/dev/null; then
+            echo "Unexpected Godot ERROR lines detected during regression." >&2
+            exit 3
+          fi
+      - name: Export Web release
+        script: |
+          set -euo pipefail
+          rm -rf web
+          mkdir -p web
+          "$GODOT_BIN" --headless --path . --export-release "Web" "web/index.html"
+          test -s web/index.html
+          test -n "$(find web -maxdepth 1 -type f -name '*.wasm' -print -quit)"
+          test -n "$(find web -maxdepth 1 -type f -name '*.pck' -print -quit)"
+          echo "WEB_EXPORT_PASS"
+      - name: Package Web artifact
+        script: |
+          set -euo pipefail
+          rm -f shinobi_rogue_web_v1_0_51.zip
+          (cd web && zip -qr ../shinobi_rogue_web_v1_0_51.zip .)
+          test -s shinobi_rogue_web_v1_0_51.zip
+          shasum -a 256 shinobi_rogue_web_v1_0_51.zip
+    artifacts:
+      - shinobi_rogue_web_v1_0_51.zip
+      - web/**
+
   shinobi-ios-preflight:
     name: Shinobi Rogue iOS preflight
     instance_type: mac_mini_m2

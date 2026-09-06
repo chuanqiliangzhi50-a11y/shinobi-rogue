@@ -1,0 +1,11 @@
+{
+  "version_1_0_50": true,
+  "release_channel": true,
+  "save_schema_v4": true,
+  "function_count": 127,
+  "unique_function_count": 127,
+  "duplicate_functions": [],
+  "web_preset": true,
+  "pwa_enabled": true,
+  "issues": []
+}

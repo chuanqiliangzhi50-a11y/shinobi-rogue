@@ -1,7 +1,7 @@
 extends Node2D
 
-const VERSION := "1.0.49"
-const RELEASE_CHANNEL := "CODEMAGIC HEADLESS FIX RC"
+const VERSION := "1.0.51"
+const RELEASE_CHANNEL := "CODEMAGIC WEB READY"
 const DEVELOPMENT_UI_ENABLED := false
 const ADS_ENABLED := false # Initial App Store release: ad SDK not integrated yet.
 const MAP_W := 31

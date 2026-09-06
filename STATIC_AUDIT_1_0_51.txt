@@ -1,0 +1,10 @@
+{
+  "version": "1.0.51",
+  "functions": 127,
+  "unique_functions": 127,
+  "save_schema": 4,
+  "web_preset": true,
+  "pwa": true,
+  "codemagic_web_workflow": true,
+  "issues": []
+}

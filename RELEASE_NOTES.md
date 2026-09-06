@@ -1,3 +1,43 @@
+# Ver.1.0.51 CODEMAGIC WEB READY
+
+## Purpose
+Make the first zero-cost Web release build reproducible in Codemagic without Apple credentials.
+
+## Changes
+- Added `shinobi-web-release` workflow to `codemagic.yaml`.
+- The workflow installs Godot 4.7.2 and export templates on Codemagic macOS.
+- Imports resources before tests/export.
+- Requires `SHINOBI_REGRESSION PASS ALL:` and fails on any `ERROR:` line.
+- Exports the `Web` preset to `web/index.html`.
+- Packages the entire Web build as `shinobi_rogue_web_v1_0_51.zip`.
+- Publishes both the ZIP and expanded Web directory as Codemagic artifacts.
+
+## Unchanged
+- Core game rules
+- save schema v4
+- 100-floor contract
+- ads/tracking remain disabled
+
+# Ver.1.0.51 CODEMAGIC WEB READY
+
+## Purpose
+Start the zero-cost Web-first release path toward 2026-09-27 without changing the validated game rules.
+
+## Changes
+- Version synchronized to 1.0.51.
+- Release channel changed to `CODEMAGIC WEB READY`.
+- Project display name cleaned up.
+- Added guarded one-command Web release scripts.
+- Added dated Web release plan and FREE/PREMIUM packaging policy.
+- Existing PWA-enabled Web export preset retained.
+
+## Unchanged
+- Core game rules
+- save schema v4
+- 100-floor contract
+- shop/steal/shadow-bind/hide/hunger/boss/village systems
+- Ads and tracking remain disabled in this build
+
 # Ver.1.0.49 CODEMAGIC HEADLESS FIX RC
 
 ## Purpose

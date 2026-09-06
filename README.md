@@ -1,3 +1,12 @@
+# 忍道 - SHINOBI ROGUE Ver.1.0.51 CODEMAGIC WEB READY
+
+## Ver.1.0.51
+
+- Added a dedicated Codemagic Web release workflow that requires no Apple Developer account.
+- Cloud build now performs resource import -> guarded regression -> Web release export -> artifact ZIP packaging.
+- Web artifacts include the complete Godot HTML5/PWA build for personal iPhone play and later public hosting.
+- Game rules, save schema v4, and ads-OFF behavior are unchanged from Ver.1.0.50.
+
 # 忍道 - SHINOBI ROGUE Ver.1.0.49 CODEMAGIC HEADLESS FIX RC
 
 ## Ver.1.0.49
