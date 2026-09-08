@@ -1,3 +1,24 @@
+# Ver.1.0.52 QUALITY IMPROVEMENT PREVIEW
+
+## Purpose
+Improve first-touch iPhone play quality without changing validated game rules or save schema.
+
+## Changes
+- Reworked portrait HUD for clearer HP/fullness/status readability.
+- Reworked dungeon floor/wall/stair presentation into an original Japanese roguelike-inspired room-and-corridor visual language.
+- Increased explored-floor contrast and wall readability on phone screens.
+- Added framed message/equipment panel and more compact touch controls.
+- Refined village menu hierarchy and highlighted sortie action.
+- Character/enemy/item art remains placeholder glyphs pending per-design approval.
+- Version synchronized to 1.0.52 and Web artifact name updated.
+
+## Unchanged
+- Core gameplay rules
+- save schema v4
+- 100-floor contract
+- shop/steal/shadow-bind/hide/hunger/boss/village systems
+- ads/tracking remain disabled
+
 # Ver.1.0.51 CODEMAGIC WEB READY
 
 ## Purpose

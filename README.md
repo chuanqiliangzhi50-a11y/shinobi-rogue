@@ -1,6 +1,8 @@
-# 忍道 - SHINOBI ROGUE Ver.1.0.51 CODEMAGIC WEB READY
+# 忍道 - SHINOBI ROGUE Ver.1.0.52 QUALITY IMPROVEMENT PREVIEW
 
-## Ver.1.0.51
+## Ver.1.0.52
+
+Quality improvement preview: dungeon/HUD/touch presentation upgraded; character and item art remain placeholders until approved.
 
 - Added a dedicated Codemagic Web release workflow that requires no Apple Developer account.
 - Cloud build now performs resource import -> guarded regression -> Web release export -> artifact ZIP packaging.

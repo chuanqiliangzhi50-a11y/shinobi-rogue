@@ -1,7 +1,7 @@
 extends Node2D
 
-const VERSION := "1.0.51"
-const RELEASE_CHANNEL := "CODEMAGIC WEB READY"
+const VERSION := "1.0.52"
+const RELEASE_CHANNEL := "QUALITY IMPROVEMENT PREVIEW"
 const DEVELOPMENT_UI_ENABLED := false
 const ADS_ENABLED := false # Initial App Store release: ad SDK not integrated yet.
 const MAP_W := 31
@@ -2582,18 +2582,39 @@ func handle_modal_touch_portrait(pos: Vector2) -> void:
 				return
 
 
+func draw_panel(rect: Rect2, fill: Color = Color("#141b23"), border: Color = Color("#46515f"), border_width: float = 2.0) -> void:
+	draw_rect(rect, fill)
+	draw_rect(rect, border, false, border_width)
+
+
+func draw_meter(pos: Vector2, size: Vector2, value: int, maximum: int, fill: Color, bg: Color = Color("#151a20")) -> void:
+	var ratio := 0.0
+	if maximum > 0:
+		ratio = clamp(float(value) / float(maximum), 0.0, 1.0)
+	draw_rect(Rect2(pos, size), bg)
+	draw_rect(Rect2(pos, Vector2(size.x * ratio, size.y)), fill)
+	draw_rect(Rect2(pos, size), Color("#66717e"), false, 1.0)
+
+
 func draw_village_portrait() -> void:
-	draw_rect(Rect2(0, 0, 720, 1100), Color("#121820"))
-	draw_ui_text(Vector2(50, 92), "忍の里", HORIZONTAL_ALIGNMENT_LEFT, -1, 42, Color("#e4cf7a"))
-	draw_ui_text(Vector2(50, 145), "忍魂 %d   銭 %d" % [souls, coins], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
-	draw_ui_text(Vector2(50, 180), "恒久 HP+%d  攻撃+%d  防御+%d  初期忍気%d" % [perm_hp, perm_attack, perm_defense, perm_ninja_energy], HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color.WHITE)
+	draw_rect(Rect2(0, 0, 720, 1100), Color("#0a1017"))
+	# Replaceable visual shell: no gameplay/save dependency.
+	draw_rect(Rect2(0, 0, 720, 190), Color("#111b27"))
+	draw_rect(Rect2(0, 190, 720, 3), Color("#8d7740"))
+	draw_ui_text(Vector2(46, 72), "忍の里", HORIZONTAL_ALIGNMENT_LEFT, -1, 44, Color("#e8d47f"))
+	draw_ui_text(Vector2(48, 120), "忍魂 %d    銭 %d" % [souls, coins], HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color("#e4e8ed"))
+	draw_ui_text(Vector2(48, 157), "恒久 HP+%d  攻撃+%d  防御+%d  初期忍気%d" % [perm_hp, perm_attack, perm_defense, perm_ninja_energy], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#aeb7c2"))
 	if village_menu == "main":
 		var labels = ["鍛冶屋", "忍術研究所", "忍録帳", "恒久成長", "出陣"]
 		for i in range(labels.size()):
-			var r := Rect2(50, 220 + i * 82, 620, 68)
-			draw_rect(r, Color("#252c35"))
-			draw_rect(r, Color("#596575"), false, 2)
-			draw_ui_text(r.position + Vector2(24, 45), labels[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color.WHITE)
+			var r := Rect2(48, 226 + i * 84, 624, 66)
+			var fill := Color("#18212b")
+			var border := Color("#455464")
+			if i == labels.size() - 1:
+				fill = Color("#282717")
+				border = Color("#d7bf66")
+			draw_panel(r, fill, border, 2.0)
+			draw_ui_text(r.position + Vector2(26, 44), labels[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color("#f0f2f5"))
 	else:
 		var title := ""
 		var actions: Array = []
@@ -2609,86 +2630,122 @@ func draw_village_portrait() -> void:
 		else:
 			title = "恒久成長"
 			actions = ["最大HP+5（忍魂5）", "攻撃+1（忍魂5）", "防御+1（忍魂5）"]
-		draw_ui_text(Vector2(50, 245), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color("#e4cf7a"))
+		draw_ui_text(Vector2(48, 250), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 32, Color("#e8d47f"))
 		for i in range(actions.size()):
-			var r := Rect2(50, 300 + i * 80, 620, 64)
-			draw_rect(r, Color("#252c35"))
-			draw_rect(r, Color("#596575"), false, 2)
+			var r := Rect2(48, 306 + i * 80, 624, 64)
+			draw_panel(r, Color("#18212b"), Color("#455464"), 2.0)
 			draw_ui_text(r.position + Vector2(18, 42), str(actions[i]).left(42), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color.WHITE)
-		var back := Rect2(50,650,260,64)
-		draw_rect(back,Color("#252c35"))
-		draw_rect(back,Color("#596575"),false,2)
-		draw_ui_text(back.position+Vector2(24,42),"戻る",HORIZONTAL_ALIGNMENT_LEFT,-1,22,Color.WHITE)
-	draw_ui_text(Vector2(50, 1020), message.left(40), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("#e4cf7a"))
-	draw_ui_text(Vector2(470, 70), "Ver.%s %s" % [VERSION, RELEASE_CHANNEL], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#8995a3"))
+		var back := Rect2(48, 654, 270, 64)
+		draw_panel(back, Color("#18212b"), Color("#455464"), 2.0)
+		draw_ui_text(back.position + Vector2(24, 42), "戻る", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
+	draw_panel(Rect2(40, 984, 640, 70), Color("#111820"), Color("#394653"), 1.0)
+	draw_ui_text(Vector2(54, 1028), message.left(40), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("#e5d37d"))
+	draw_ui_text(Vector2(465, 46), "Ver.%s" % VERSION, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#7f8b98"))
+
+
+func draw_dungeon_tile(p: Vector2, tile: String, seen: bool, x: int, y: int, tile_size: int) -> void:
+	var r := Rect2(p, Vector2(tile_size - 1, tile_size - 1))
+	if not seen:
+		draw_rect(r, Color("#05080b"))
+		return
+	if tile == "#":
+		var wall_base := Color("#2a3035")
+		if (x + y) % 3 == 0:
+			wall_base = Color("#30373c")
+		draw_rect(r, wall_base)
+		draw_rect(Rect2(p + Vector2(2, 2), Vector2(tile_size - 5, tile_size - 5)), Color("#1f252a"))
+		if y % 2 == 0:
+			draw_line(p + Vector2(2, tile_size * 0.5), p + Vector2(tile_size - 3, tile_size * 0.5), Color("#394047"), 1.0)
+		if x % 2 == 0:
+			draw_line(p + Vector2(tile_size * 0.5, 2), p + Vector2(tile_size * 0.5, tile_size - 3), Color("#161b20"), 1.0)
+	elif tile == ">":
+		draw_rect(r, Color("#4b442c"))
+		draw_rect(Rect2(p + Vector2(3, 3), Vector2(tile_size - 7, tile_size - 7)), Color("#776a3d"))
+	else:
+		var floor_base := Color("#7b6745")
+		if (x * 7 + y * 11) % 5 == 0:
+			floor_base = Color("#846e48")
+		draw_rect(r, floor_base)
+		draw_rect(Rect2(p + Vector2(1, 1), Vector2(tile_size - 3, tile_size - 3)), floor_base)
+		if (x + y) % 4 == 0:
+			draw_line(p + Vector2(4, tile_size - 5), p + Vector2(tile_size - 5, tile_size - 5), Color("#5a4c37"), 1.0)
 
 
 func draw_dungeon_portrait() -> void:
 	const PTILE := 21
 	const PMAP_X := 34
-	const PMAP_Y := 118
-	draw_rect(Rect2(0,0,720,1100), Color("#0d1117"))
-	draw_ui_text(Vector2(20,38), "忍道 - SHINOBI ROGUE", HORIZONTAL_ALIGNMENT_LEFT,-1,24,Color("#e4cf7a"))
-	draw_ui_text(Vector2(20,72), "Ver.%s %s" % [VERSION,RELEASE_CHANNEL], HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("#8995a3"))
-	draw_ui_text(Vector2(20,102), "%dF  HP %d/%d  満腹 %d  忍気 %d  忍道:%s" % [floor_no,hp,max_hp,hunger,ninja_energy,style_name], HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color.WHITE)
+	const PMAP_Y := 154
+	draw_rect(Rect2(0, 0, 720, 1100), Color("#080c11"))
+	draw_rect(Rect2(0, 0, 720, 128), Color("#101822"))
+	draw_rect(Rect2(0, 126, 720, 2), Color("#5a6673"))
+	draw_ui_text(Vector2(20, 34), "忍道 - SHINOBI ROGUE", HORIZONTAL_ALIGNMENT_LEFT, -1, 23, Color("#e8d47f"))
+	draw_ui_text(Vector2(535, 33), "Ver.%s" % VERSION, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("#7f8b98"))
+	draw_ui_text(Vector2(20, 66), "%dF" % floor_no, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+	draw_ui_text(Vector2(72, 66), "HP %d/%d" % [hp, max_hp], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#e7ebef"))
+	draw_meter(Vector2(178, 53), Vector2(120, 13), hp, max_hp, Color("#67b96f"))
+	draw_ui_text(Vector2(320, 66), "満腹 %d" % hunger, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#e7ebef"))
+	draw_meter(Vector2(430, 53), Vector2(90, 13), hunger, 100, Color("#5f8fe8"))
+	draw_ui_text(Vector2(540, 66), "忍気 %d" % ninja_energy, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#e7ebef"))
+	draw_ui_text(Vector2(20, 102), "忍道:%s   銭 %d(+%d)   忍魂 %d(+%d)   T%d" % [style_name, coins, run_coins, souls, run_souls, turn_no], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#aeb7c2"))
+	draw_panel(Rect2(20, 140, 680, 382), Color("#0b0f14"), Color("#3c4650"), 2.0)
 	for y in range(MAP_H):
 		for x in range(MAP_W):
-			var p := Vector2(PMAP_X + x*PTILE, PMAP_Y + y*PTILE)
+			var p := Vector2(PMAP_X + x * PTILE, PMAP_Y + y * PTILE)
 			var seen := validate_grid(explored) and bool(explored[y][x])
 			var tile := str(map[y][x]) if validate_grid(map) else "#"
-			var col := Color("#232a33") if seen else Color("#0c1015")
-			if tile == "#": col = Color("#151b22") if seen else Color("#090c10")
-			elif tile == ">": col = Color("#4a4430") if seen else Color("#0c1015")
-			draw_rect(Rect2(p,Vector2(PTILE-1,PTILE-1)),col)
+			draw_dungeon_tile(p, tile, seen, x, y, PTILE)
+	# Entity art is intentionally still placeholder glyphs until design approval.
 	for item in items:
 		var ip: Vector2i = item["pos"]
-		if is_visible_cell(ip): draw_ui_text(portrait_cell_center(ip)+Vector2(-8,6),"物",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("#d6c56d"))
+		if is_visible_cell(ip):
+			draw_ui_text(portrait_cell_center(ip) + Vector2(-8, 6), "物", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#f0d45f"))
 	for e in enemies:
 		var ep: Vector2i = e["pos"]
-		if is_visible_cell(ep): draw_ui_text(portrait_cell_center(ep)+Vector2(-8,6),"将" if bool(e["boss"]) else "敵",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("#e07a72"))
-	if shopkeeper.size()>0:
+		if is_visible_cell(ep):
+			draw_ui_text(portrait_cell_center(ep) + Vector2(-8, 6), "将" if bool(e["boss"]) else "敵", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#f08a7d"))
+	if shopkeeper.size() > 0:
 		var sp: Vector2i = shopkeeper["pos"]
-		if is_visible_cell(sp): draw_ui_text(portrait_cell_center(sp)+Vector2(-8,6),"闇" if merchant_type=="闇商人" else "商",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("#c59cff") if merchant_type=="闇商人" else Color("#8ad5a2"))
-	if clone_active and is_visible_cell(clone_pos): draw_ui_text(portrait_cell_center(clone_pos)+Vector2(-8,6),"影",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("#91a9d6"))
-	draw_ui_text(portrait_cell_center(player)+Vector2(-8,6),"忍",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("#d9e2ee"))
-	var hunger_note := "【空腹注意】" if hunger<=20 else ""
-	draw_ui_text(Vector2(20,470),"銭 %d(+%d)  忍魂 %d(+%d)  ターン %d %s" % [coins,run_coins,souls,run_souls,turn_no,hunger_note],HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color("#ffb27d") if hunger<=20 else Color("#c5cbd3"))
-	draw_ui_text(Vector2(20,510),message.left(44),HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color("#e4cf7a"))
-	draw_ui_text(Vector2(20,548),"装備: %s / %s" % [WEAPON_NAME,ARMOR_NAME],HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color("#c5cbd3"))
-	if unpaid_items.size()>0: draw_ui_text(Vector2(20,582),"未精算 %d点 / 合計%d銭" % [unpaid_items.size(),shop_total_unpaid()],HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("#ff9a7a"))
-	if merchant_bound_turns>0: draw_ui_text(Vector2(360,582),"商人縛影 %d" % merchant_bound_turns,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("#a8c6ff"))
-	if smoke_turns>0: draw_ui_text(Vector2(20,612),"煙 %d" % smoke_turns,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("#b7bdc8"))
-	if clone_active: draw_ui_text(Vector2(180,612),"分身あと%d歩" % clone_steps_left,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("#91a9d6"))
+		if is_visible_cell(sp):
+			draw_ui_text(portrait_cell_center(sp) + Vector2(-8, 6), "闇" if merchant_type == "闇商人" else "商", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#c59cff") if merchant_type == "闇商人" else Color("#8ad5a2"))
+	if clone_active and is_visible_cell(clone_pos):
+		draw_ui_text(portrait_cell_center(clone_pos) + Vector2(-8, 6), "影", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#91a9d6"))
+	draw_ui_text(portrait_cell_center(player) + Vector2(-8, 6), "忍", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ffffff"))
+	var hunger_note := "【空腹注意】" if hunger <= 20 else ""
+	draw_panel(Rect2(20, 534, 680, 96), Color("#111820"), Color("#394653"), 1.0)
+	draw_ui_text(Vector2(34, 567), message.left(44), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#e8d47f"))
+	draw_ui_text(Vector2(34, 603), "装備: %s / %s   %s" % [WEAPON_NAME, ARMOR_NAME, hunger_note], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#bbc4ce"))
+	if unpaid_items.size() > 0:
+		draw_ui_text(Vector2(420, 603), "未精算 %d点/%d銭" % [unpaid_items.size(), shop_total_unpaid()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ff9a7a"))
 	draw_mobile_controls_portrait()
-	if checkout_prompt or ad_menu: draw_modal_overlay_portrait()
+	if checkout_prompt or ad_menu:
+		draw_modal_overlay_portrait()
 
 
 func draw_mobile_controls_portrait() -> void:
-	var actions = [["拾","pickup"],["階段","stairs"],["奥義","ultimate"],["精算","buy"],["隠身","hide"],["縛影","bind"],["煙","smoke"],["分身","clone"],["広告","ad"]]
+	var actions = [["拾", "pickup"], ["階段", "stairs"], ["奥義", "ultimate"], ["精算", "buy"], ["隠身", "hide"], ["縛影", "bind"], ["煙", "smoke"], ["分身", "clone"], ["広告", "ad"]]
 	for i in range(actions.size()):
 		var col := i % 3
 		var row := i / 3
-		var r := Rect2(20+col*160,650+row*65,145,55)
+		var r := Rect2(20 + col * 154, 650 + row * 60, 140, 50)
 		var available := touch_action_available(str(actions[i][1]))
-		draw_rect(r,Color("#252c35") if available else Color("#171c22"))
-		draw_rect(r,Color("#48515e") if available else Color("#303740"),false,2)
-		draw_ui_text(r.position+Vector2(18,38),str(actions[i][0]),HORIZONTAL_ALIGNMENT_LEFT,-1,20,Color.WHITE if available else Color("#707984"))
-	var base := Vector2(510,650)
-	var cell := 60.0
-	var labels=[["↖","↑","↗"],["←","待","→"],["↙","↓","↘"]]
+		draw_panel(r, Color("#202934") if available else Color("#12171d"), Color("#4c5865") if available else Color("#252c34"), 1.5)
+		draw_ui_text(r.position + Vector2(17, 34), str(actions[i][0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("#f2f4f7") if available else Color("#59626d"))
+	var base := Vector2(502, 646)
+	var cell := 64.0
+	var labels = [["↖", "↑", "↗"], ["←", "待", "→"], ["↙", "↓", "↘"]]
 	for y in range(3):
 		for x in range(3):
-			var r := Rect2(base.x+x*cell,base.y+y*cell,cell-4,cell-4)
-			draw_rect(r,Color("#252c35"))
-			draw_rect(r,Color("#48515e"),false,2)
-			draw_ui_text(r.position+Vector2(15,39),labels[y][x],HORIZONTAL_ALIGNMENT_LEFT,-1,22,Color.WHITE)
-	var styles=[["武",20],["影",180],["術",340]]
+			var r := Rect2(base.x + x * cell, base.y + y * cell, cell - 4, cell - 4)
+			var center := x == 1 and y == 1
+			draw_panel(r, Color("#29333f") if center else Color("#202934"), Color("#596675"), 1.5)
+			draw_ui_text(r.position + Vector2(16, 41), labels[y][x], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
+	var styles = [["武", 20], ["影", 174], ["術", 328]]
 	for st in styles:
-		var r := Rect2(float(st[1]),855,145,55)
-		draw_rect(r,Color("#303946") if style_name==str(st[0]) else Color("#252c35"))
-		draw_rect(r,Color("#e4cf7a") if style_name==str(st[0]) else Color("#48515e"),false,2)
-		draw_ui_text(r.position+Vector2(56,38),str(st[0]),HORIZONTAL_ALIGNMENT_LEFT,-1,22,Color.WHITE)
-	draw_ui_text(Vector2(20,955),"タップ操作: 方向 / 待機 / 忍術・行動",HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("#8995a3"))
+		var r := Rect2(float(st[1]), 842, 140, 54)
+		var active := style_name == str(st[0])
+		draw_panel(r, Color("#343527") if active else Color("#202934"), Color("#dbc66e") if active else Color("#4c5865"), 2.0 if active else 1.5)
+		draw_ui_text(r.position + Vector2(54, 37), str(st[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color.WHITE)
+	draw_ui_text(Vector2(20, 930), "方向・待機・忍術をタップして行動", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#7f8b98"))
 
 
 func draw_modal_overlay_portrait() -> void:

@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="忍道 - SHINOBI ROGUE"
-config/version="1.0.51"
+config/version="1.0.52"
 run/main_scene="res://Main.tscn"
 config/features=PackedStringArray("4.7")
 config/icon="res://icon.svg"

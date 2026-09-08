@@ -1,0 +1,12 @@
+SHINOBI ROGUE STATIC AUDIT 1.0.52
+- VERSION: 1.0.52
+- RELEASE_CHANNEL: QUALITY IMPROVEMENT PREVIEW
+- GDScript functions: 130
+- Unique functions: 130
+- Duplicate function names: none
+- Save schema: v4 unchanged
+- Web artifact target: shinobi_rogue_web_v1_0_52.zip
+- Dungeon presentation helpers added: draw_panel, draw_meter, draw_dungeon_tile
+- Character/enemy/item visuals: placeholders retained pending design approval
+- Core game rules: unchanged
+- Local Godot runtime: unavailable in this container; no runtime PASS claimed
