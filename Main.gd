@@ -1,7 +1,7 @@
 extends Node2D
 
-const VERSION := "1.0.52"
-const RELEASE_CHANNEL := "QUALITY IMPROVEMENT PREVIEW"
+const VERSION := "1.0.53"
+const RELEASE_CHANNEL := "VISUAL INTEGRATION RC"
 const DEVELOPMENT_UI_ENABLED := false
 const ADS_ENABLED := false # Initial App Store release: ad SDK not integrated yet.
 const MAP_W := 31
@@ -2671,6 +2671,124 @@ func draw_dungeon_tile(p: Vector2, tile: String, seen: bool, x: int, y: int, til
 			draw_line(p + Vector2(4, tile_size - 5), p + Vector2(tile_size - 5, tile_size - 5), Color("#5a4c37"), 1.0)
 
 
+func draw_triangle(points: PackedVector2Array, color: Color) -> void:
+	draw_colored_polygon(points, color)
+
+
+func draw_player_token(center: Vector2, size: float) -> void:
+	var r := size * 0.40
+	# Approved protagonist: black hood, red scarf, silver forehead protector, sharp brown eyes.
+	draw_triangle(PackedVector2Array([center + Vector2(-r, r * 0.58), center + Vector2(r, r * 0.58), center + Vector2(0, r * 1.02)]), Color("#b9282f"))
+	draw_circle(center, r, Color("#1e1c1d"))
+	draw_circle(center + Vector2(0, r * 0.10), r * 0.62, Color("#ead1b8"))
+	draw_rect(Rect2(center + Vector2(-r * 0.63, -r * 0.62), Vector2(r * 1.26, r * 0.34)), Color("#aeb5ba"))
+	draw_rect(Rect2(center + Vector2(-r * 0.63, -r * 0.62), Vector2(r * 1.26, r * 0.34)), Color("#2c3033"), false, max(1.0, size * 0.045))
+	var eye_y := center.y + r * 0.08
+	draw_line(Vector2(center.x - r * 0.43, eye_y - r * 0.08), Vector2(center.x - r * 0.08, eye_y), Color("#3b241b"), max(1.2, size * 0.07))
+	draw_line(Vector2(center.x + r * 0.08, eye_y), Vector2(center.x + r * 0.43, eye_y - r * 0.08), Color("#3b241b"), max(1.2, size * 0.07))
+	draw_circle(center + Vector2(-r * 0.25, r * 0.14), max(1.0, r * 0.12), Color("#4b2b20"))
+	draw_circle(center + Vector2(r * 0.25, r * 0.14), max(1.0, r * 0.12), Color("#4b2b20"))
+
+
+func draw_hound_token(center: Vector2, size: float, dark_variant: bool = false) -> void:
+	var r := size * 0.36
+	var fur := Color("#2c2929") if dark_variant else Color("#c98746")
+	var face := Color("#d9c0a6") if dark_variant else Color("#f0d6ae")
+	var scarf := Color("#8e2731") if dark_variant else Color("#b9282f")
+	draw_triangle(PackedVector2Array([center + Vector2(-r * 0.76, -r * 0.38), center + Vector2(-r * 0.38, -r * 1.02), center + Vector2(-r * 0.12, -r * 0.38)]), fur)
+	draw_triangle(PackedVector2Array([center + Vector2(r * 0.12, -r * 0.38), center + Vector2(r * 0.38, -r * 1.02), center + Vector2(r * 0.76, -r * 0.38)]), fur)
+	draw_triangle(PackedVector2Array([center + Vector2(-r, r * 0.62), center + Vector2(r, r * 0.62), center + Vector2(0, r * 0.95)]), scarf)
+	draw_circle(center, r, fur)
+	draw_circle(center + Vector2(0, r * 0.13), r * 0.60, face)
+	draw_rect(Rect2(center + Vector2(-r * 0.72, -r * 0.60), Vector2(r * 1.44, r * 0.31)), Color("#aeb5ba"))
+	draw_circle(center + Vector2(-r * 0.23, r * 0.08), max(1.0, r * 0.11), Color("#241918"))
+	draw_circle(center + Vector2(r * 0.23, r * 0.08), max(1.0, r * 0.11), Color("#241918"))
+	draw_circle(center + Vector2(0, r * 0.32), max(1.0, r * 0.10), Color("#191516"))
+
+
+func draw_enemy_token(center: Vector2, size: float, enemy: Dictionary) -> void:
+	var kind := str(enemy.get("kind", "legacy"))
+	var is_boss := bool(enemy.get("boss", false))
+	var name := str(enemy.get("name", "敵"))
+	if kind == "hound":
+		draw_hound_token(center, size, floor_no >= 40)
+		return
+	var r := size * (0.43 if is_boss else 0.38)
+	var hood := Color("#20252b")
+	var scarf := Color("#2f5b88")
+	if kind == "archer":
+		hood = Color("#2c202c")
+		scarf = Color("#7e315f")
+	elif kind == "shadow":
+		hood = Color("#211b29")
+		scarf = Color("#644784")
+	elif kind == "elite":
+		hood = Color("#251c1b")
+		scarf = Color("#8e2731")
+	if is_boss:
+		if "鬼面" in name:
+			hood = Color("#7f2b25")
+			scarf = Color("#d09b5b")
+		elif "鎧" in name:
+			hood = Color("#2b211b")
+			scarf = Color("#b84a32")
+		elif "影" in name:
+			hood = Color("#251c31")
+			scarf = Color("#734d98")
+		else:
+			hood = Color("#3b2024")
+			scarf = Color("#a12c31")
+		draw_circle(center, r + size * 0.05, Color("#d6b36a"))
+	draw_triangle(PackedVector2Array([center + Vector2(-r, r * 0.62), center + Vector2(r, r * 0.62), center + Vector2(0, r * 0.98)]), scarf)
+	draw_circle(center, r, hood)
+	draw_circle(center + Vector2(0, r * 0.12), r * 0.58, Color("#e5c8ad"))
+	draw_rect(Rect2(center + Vector2(-r * 0.68, -r * 0.60), Vector2(r * 1.36, r * 0.30)), Color("#a9afb3"))
+	var eye := Color("#53251d") if not is_boss else Color("#8d1f1f")
+	draw_line(center + Vector2(-r * 0.42, r * 0.01), center + Vector2(-r * 0.10, r * 0.08), eye, max(1.0, size * 0.065))
+	draw_line(center + Vector2(r * 0.10, r * 0.08), center + Vector2(r * 0.42, r * 0.01), eye, max(1.0, size * 0.065))
+	if kind == "archer":
+		draw_line(center + Vector2(r * 0.65, -r * 0.15), center + Vector2(r * 0.95, r * 0.25), Color("#c1c6cb"), 1.2)
+
+
+func draw_merchant_token(center: Vector2, size: float, dark: bool) -> void:
+	var r := size * 0.38
+	if dark:
+		draw_triangle(PackedVector2Array([center + Vector2(-r, r * 0.7), center + Vector2(r, r * 0.7), center + Vector2(0, r * 1.0)]), Color("#5c4679"))
+		draw_circle(center, r, Color("#211d27"))
+		draw_circle(center + Vector2(0, r * 0.12), r * 0.54, Color("#ddc2a7"))
+		draw_circle(center + Vector2(-r * 0.22, r * 0.08), max(1.0, r * 0.10), Color("#3a201d"))
+		draw_circle(center + Vector2(r * 0.22, r * 0.08), max(1.0, r * 0.10), Color("#3a201d"))
+	else:
+		draw_rect(Rect2(center + Vector2(-r * 0.65, r * 0.40), Vector2(r * 1.30, r * 0.58)), Color("#8c6844"))
+		draw_circle(center, r, Color("#d9c49d"))
+		draw_circle(center + Vector2(0, r * 0.10), r * 0.64, Color("#edcfb0"))
+		draw_rect(Rect2(center + Vector2(-r * 0.70, -r * 0.58), Vector2(r * 1.40, r * 0.25)), Color("#e7dfcb"))
+		draw_circle(center + Vector2(-r * 0.22, r * 0.10), max(1.0, r * 0.11), Color("#493027"))
+		draw_circle(center + Vector2(r * 0.22, r * 0.10), max(1.0, r * 0.11), Color("#493027"))
+
+
+func draw_item_token(center: Vector2, size: float, item_name: String) -> void:
+	var r := size * 0.34
+	if item_name in ["兵糧丸", "大兵糧丸"]:
+		draw_triangle(PackedVector2Array([center + Vector2(0, -r), center + Vector2(-r, r * 0.75), center + Vector2(r, r * 0.75)]), Color("#f1eee5"))
+		draw_rect(Rect2(center + Vector2(-r * 0.35, r * 0.22), Vector2(r * 0.70, r * 0.52)), Color("#25292a"))
+	elif "巻物" in item_name:
+		var col := Color("#71825c")
+		if item_name == "中巻物": col = Color("#4e668e")
+		elif item_name == "大巻物": col = Color("#9b553c")
+		elif item_name == "究極巻物": col = Color("#5d3d78")
+		draw_rect(Rect2(center + Vector2(-r, -r * 0.55), Vector2(r * 2.0, r * 1.10)), col)
+		draw_circle(center + Vector2(-r, 0), r * 0.30, Color("#c99c58"))
+		draw_circle(center + Vector2(r, 0), r * 0.30, Color("#c99c58"))
+	else:
+		var col := Color("#64a65e")
+		if item_name == "忍気丸": col = Color("#5d88d8")
+		elif item_name == "上薬": col = Color("#c65d5d")
+		draw_circle(center + Vector2(0, r * 0.16), r * 0.75, col)
+		draw_rect(Rect2(center + Vector2(-r * 0.28, -r * 0.95), Vector2(r * 0.56, r * 0.42)), Color("#8a6444"))
+		draw_arc(center + Vector2(0, r * 0.16), r * 0.75, 0, TAU, 16, Color("#d7c28a"), max(1.0, size * 0.045))
+
+
 func draw_dungeon_portrait() -> void:
 	const PTILE := 21
 	const PMAP_X := 34
@@ -2694,22 +2812,23 @@ func draw_dungeon_portrait() -> void:
 			var seen := validate_grid(explored) and bool(explored[y][x])
 			var tile := str(map[y][x]) if validate_grid(map) else "#"
 			draw_dungeon_tile(p, tile, seen, x, y, PTILE)
-	# Entity art is intentionally still placeholder glyphs until design approval.
+	# Approved visual direction rendered as compact original tokens at dungeon scale.
 	for item in items:
 		var ip: Vector2i = item["pos"]
 		if is_visible_cell(ip):
-			draw_ui_text(portrait_cell_center(ip) + Vector2(-8, 6), "物", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#f0d45f"))
+			draw_item_token(portrait_cell_center(ip), PTILE * 0.92, str(item.get("name", "薬")))
 	for e in enemies:
 		var ep: Vector2i = e["pos"]
 		if is_visible_cell(ep):
-			draw_ui_text(portrait_cell_center(ep) + Vector2(-8, 6), "将" if bool(e["boss"]) else "敵", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#f08a7d"))
+			draw_enemy_token(portrait_cell_center(ep), PTILE * 0.96, e)
 	if shopkeeper.size() > 0:
 		var sp: Vector2i = shopkeeper["pos"]
 		if is_visible_cell(sp):
-			draw_ui_text(portrait_cell_center(sp) + Vector2(-8, 6), "闇" if merchant_type == "闇商人" else "商", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#c59cff") if merchant_type == "闇商人" else Color("#8ad5a2"))
+			draw_merchant_token(portrait_cell_center(sp), PTILE * 0.98, merchant_type == "闇商人")
 	if clone_active and is_visible_cell(clone_pos):
-		draw_ui_text(portrait_cell_center(clone_pos) + Vector2(-8, 6), "影", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#91a9d6"))
-	draw_ui_text(portrait_cell_center(player) + Vector2(-8, 6), "忍", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ffffff"))
+		draw_circle(portrait_cell_center(clone_pos), PTILE * 0.31, Color(0.33, 0.48, 0.72, 0.55))
+		draw_player_token(portrait_cell_center(clone_pos), PTILE * 0.86)
+	draw_player_token(portrait_cell_center(player), PTILE * 0.98)
 	var hunger_note := "【空腹注意】" if hunger <= 20 else ""
 	draw_panel(Rect2(20, 534, 680, 96), Color("#111820"), Color("#394653"), 1.0)
 	draw_ui_text(Vector2(34, 567), message.left(44), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#e8d47f"))
@@ -2722,7 +2841,9 @@ func draw_dungeon_portrait() -> void:
 
 
 func draw_mobile_controls_portrait() -> void:
-	var actions = [["拾", "pickup"], ["階段", "stairs"], ["奥義", "ultimate"], ["精算", "buy"], ["隠身", "hide"], ["縛影", "bind"], ["煙", "smoke"], ["分身", "clone"], ["広告", "ad"]]
+	var actions = [["拾", "pickup"], ["階段", "stairs"], ["奥義", "ultimate"], ["精算", "buy"], ["隠身", "hide"], ["縛影", "bind"], ["煙", "smoke"], ["分身", "clone"]]
+	if ADS_ENABLED:
+		actions.append(["広告", "ad"])
 	for i in range(actions.size()):
 		var col := i % 3
 		var row := i / 3
@@ -2883,24 +3004,23 @@ func draw_dungeon() -> void:
 	for item in items:
 		var ip: Vector2i = item["pos"]
 		if is_visible_cell(ip):
-			draw_ui_text(cell_center(ip) + Vector2(-5, 6), "物", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#d6c56d"))
+			draw_item_token(cell_center(ip), TILE * 0.92, str(item.get("name", "薬")))
 
 	for e in enemies:
 		var ep: Vector2i = e["pos"]
 		if is_visible_cell(ep):
-			var mark = "将" if bool(e["boss"]) else "敵"
-			draw_ui_text(cell_center(ep) + Vector2(-7, 6), mark, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#e07a72"))
+			draw_enemy_token(cell_center(ep), TILE * 0.96, e)
 
 	if shopkeeper.size() > 0:
 		var sp: Vector2i = shopkeeper["pos"]
 		if is_visible_cell(sp):
-			var merchant_mark = "闇" if merchant_type == "闇商人" else "商"
-			draw_ui_text(cell_center(sp) + Vector2(-7, 6), merchant_mark, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#c59cff") if merchant_type == "闇商人" else Color("#8ad5a2"))
+			draw_merchant_token(cell_center(sp), TILE * 0.98, merchant_type == "闇商人")
 
 	if clone_active and is_visible_cell(clone_pos):
-		draw_ui_text(cell_center(clone_pos) + Vector2(-7, 6), "影", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#91a9d6"))
+		draw_circle(cell_center(clone_pos), TILE * 0.31, Color(0.33, 0.48, 0.72, 0.55))
+		draw_player_token(cell_center(clone_pos), TILE * 0.86)
 
-	draw_ui_text(cell_center(player) + Vector2(-7, 6), "忍", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#d9e2ee"))
+	draw_player_token(cell_center(player), TILE * 0.98)
 
 	var hunger_note = "  【空腹注意】" if hunger <= 20 else ""
 	draw_ui_text(Vector2(16, HUD_Y + 30), "銭 %d(+%d)  忍魂 %d(+%d)  ターン %d%s" % [coins, run_coins, souls, run_souls, turn_no, hunger_note], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#ffb27d") if hunger <= 20 else Color("#c5cbd3"))
@@ -2947,7 +3067,7 @@ func touch_action_available(action: String) -> bool:
 	if action == "clone":
 		return ninja_energy >= 30 and not clone_active
 	if action == "ad":
-		return ad_boost_uses < 3
+		return ADS_ENABLED and ad_boost_uses < 3
 	return true
 
 
@@ -2964,8 +3084,10 @@ func draw_mobile_controls() -> void:
 
 	var actions = [
 		["拾", "pickup", 20, 78], ["階段", "stairs", 104, 78], ["奥義", "ultimate", 188, 78], ["精算", "buy", 272, 78],
-		["隠身", "hide", 356, 78], ["縛影", "bind", 440, 86], ["煙", "smoke", 532, 68], ["分身", "clone", 606, 78], ["広告", "ad", 690, 72]
+		["隠身", "hide", 356, 78], ["縛影", "bind", 440, 86], ["煙", "smoke", 532, 68], ["分身", "clone", 606, 78]
 	]
+	if ADS_ENABLED:
+		actions.append(["広告", "ad", 690, 72])
 	for a in actions:
 		var r = Rect2(float(a[2]), 662, float(a[3]), 42)
 		var available = touch_action_available(str(a[1]))

@@ -1,0 +1,16 @@
+SHINOBI ROGUE STATIC AUDIT 1.0.53
+- functions: 136
+- unique functions: 136
+- save schema: 4
+- version: PASS
+- release: PASS
+- schema4: PASS
+- player_token: PASS
+- enemy_token: PASS
+- item_token: PASS
+- merchant_token: PASS
+- ad_hidden: PASS
+- pwa_off: PASS
+- cm_1053: PASS
+- art_lock: PASS
+- issues: []

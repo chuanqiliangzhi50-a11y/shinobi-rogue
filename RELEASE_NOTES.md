@@ -1,3 +1,23 @@
+# Ver.1.0.53 VISUAL INTEGRATION RC
+
+## Purpose
+Convert the approved character/item art direction into readable in-game dungeon visuals while preserving validated game rules.
+
+## Changes
+- Replaced placeholder glyph entities (忍/敵/物/商/闇) with compact original vector tokens derived from the approved chibi art direction.
+- Added distinct visual tokens for protagonist, ninja hounds, enemy classes, bosses, traveler merchant, dark merchant, clone, food, medicine/energy bottles, and scroll tiers.
+- Added approved art reference pack under `design_reference/` plus `ART_DIRECTION_LOCK.md`; references are excluded from Web export to keep the build small.
+- Hidden the advertisement button while `ADS_ENABLED == false`.
+- Disabled PWA/service-worker export during rapid Netlify test cycles to reduce stale iPhone cache issues. PWA can be re-enabled for public release after versioned-cache handling is finalized.
+- Version synchronized to 1.0.53 and Codemagic Web artifact renamed to `shinobi_rogue_web_v1_0_53.zip`.
+
+## Unchanged
+- Core gameplay rules
+- save schema v4
+- 100-floor contract
+- shop/steal/shadow-bind/hide/hunger/boss/village systems
+- ads/tracking remain disabled
+
 # Ver.1.0.52 QUALITY IMPROVEMENT PREVIEW
 
 ## Purpose

@@ -47,12 +47,12 @@ workflows:
       - name: Package Web artifact
         script: |
           set -euo pipefail
-          rm -f shinobi_rogue_web_v1_0_52.zip
-          (cd web && zip -qr ../shinobi_rogue_web_v1_0_52.zip .)
-          test -s shinobi_rogue_web_v1_0_52.zip
-          shasum -a 256 shinobi_rogue_web_v1_0_52.zip
+          rm -f shinobi_rogue_web_v1_0_53.zip
+          (cd web && zip -qr ../shinobi_rogue_web_v1_0_53.zip .)
+          test -s shinobi_rogue_web_v1_0_53.zip
+          shasum -a 256 shinobi_rogue_web_v1_0_53.zip
     artifacts:
-      - shinobi_rogue_web_v1_0_52.zip
+      - shinobi_rogue_web_v1_0_53.zip
       - web/**
 
   shinobi-ios-preflight:
