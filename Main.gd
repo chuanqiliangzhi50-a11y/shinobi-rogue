@@ -151,7 +151,7 @@ func load_optional_entity_art() -> void:
 func draw_entity_visual(center: Vector2, art_key: String, fallback: String, font_size: int, color: Color, tile_size: float) -> void:
 	if entity_art.has(art_key):
 		var tex: Texture2D = entity_art[art_key]
-		var size := max(12.0, tile_size - 2.0)
+		var size: float = maxf(12.0, tile_size - 2.0)
 		draw_texture_rect(tex, Rect2(center - Vector2(size, size) * 0.5, Vector2(size, size)), false)
 	else:
 		draw_ui_text(center + Vector2(-8, 6), fallback, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
@@ -1860,8 +1860,8 @@ func use_projectile() -> void:
 	for i in range(enemies.size()):
 		var ep: Vector2i = enemies[i]["pos"]
 		var d := ep - player
-		var aligned := d.x == 0 or d.y == 0 or abs(d.x) == abs(d.y)
-		var dist := max(abs(d.x), abs(d.y))
+		var aligned: bool = d.x == 0 or d.y == 0 or abs(d.x) == abs(d.y)
+		var dist: int = maxi(abs(d.x), abs(d.y))
 		if aligned and dist > 0 and dist <= 5 and has_clear_shot(player, ep, 5):
 			if dist < best_dist:
 				best_dist = dist
