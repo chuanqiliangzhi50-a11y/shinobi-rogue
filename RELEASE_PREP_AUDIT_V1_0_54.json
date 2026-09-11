@@ -1,0 +1,37 @@
+{
+  "project": "忍道 - SHINOBI ROGUE",
+  "version": "1.0.54",
+  "run": "RUN16",
+  "audit_type": "release_prep_static_audit",
+  "timestamp_utc": "2026-09-11T03:51:54.520406+00:00",
+  "godot_runtime_available": false,
+  "runtime_pass_claimed": false,
+  "checks": {
+    "project_at_release_root": true,
+    "codemagic_present": true,
+    "export_presets_present": true,
+    "ios_template_present": true,
+    "web_windows_flag_fixed": true,
+    "web_linux_flag_fixed": true,
+    "linux_stray_command_removed": true,
+    "web_workflow": true,
+    "ios_preflight_workflow": true,
+    "ios_appstore_workflow": true,
+    "godot_4_7_2": true,
+    "regression_marker": true,
+    "web_export_preset": true,
+    "version_1_0_54": true,
+    "handoff_present": true,
+    "codemagic_yaml_parse": true
+  },
+  "static_pass": true,
+  "external_verification": {
+    "godot_4_7_2_stable": "verified via official Godot archive, released 2026-08-18",
+    "codemagic_ios_signing_schema": "verified against current Codemagic docs"
+  },
+  "known_blockers": [
+    "Apple Developer Program membership/signing credentials still required for TestFlight/App Store.",
+    "Final Bundle ID and Apple Team ID still need real values.",
+    "Approved entity art PNG files are still absent."
+  ]
+}

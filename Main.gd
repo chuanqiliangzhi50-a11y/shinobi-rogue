@@ -1,7 +1,7 @@
 extends Node2D
 
-const VERSION := "1.0.53"
-const RELEASE_CHANNEL := "VISUAL INTEGRATION RC"
+const VERSION := "1.0.54"
+const RELEASE_CHANNEL := "PLAY UI SYSTEM RC"
 const DEVELOPMENT_UI_ENABLED := false
 const ADS_ENABLED := false # Initial App Store release: ad SDK not integrated yet.
 const MAP_W := 31
@@ -12,7 +12,7 @@ const MAP_Y := 96
 const HUD_Y := 468
 const META_PATH := "user://shinobi_meta.json"
 const RUN_PATH := "user://shinobi_run.save"
-const RUN_SAVE_VERSION := 4
+const RUN_SAVE_VERSION := 5
 const PAD_X := 820
 const PAD_Y := 562
 const PAD_CELL := 50
@@ -30,6 +30,10 @@ var player := Vector2i(2, 2)
 var stairs_pos := Vector2i(0, 0)
 var enemies: Array = []
 var items: Array = []
+var inventory_items: Array = []
+var placed_traps: Array = []
+var inventory_menu := false
+var inventory_selected := 0
 
 var floor_no := 1
 var turn_no := 0
@@ -65,6 +69,7 @@ var shopkeeper_home := Vector2i(-1, -1)
 var shop_items: Array = []
 var unpaid_items: Array = []
 var checkout_prompt := false
+var stairs_prompt := false
 var merchant_bound_turns := 0
 
 var smoke_turns := 0
@@ -92,10 +97,23 @@ var death_log: Array = []
 var self_test_mode := false
 var regression_all_pass := false
 var ui_glyph_texture: Texture2D = null
+var entity_art: Dictionary = {}
+const ENTITY_ART_PATHS := {
+	"player": "res://art/player.png",
+	"clone": "res://art/clone.png",
+	"item": "res://art/item.png",
+	"enemy": "res://art/enemy.png",
+	"boss": "res://art/boss.png",
+	"merchant": "res://art/merchant.png",
+	"dark_merchant": "res://art/dark_merchant.png",
+	"trap": "res://art/trap.png"
+}
 const UI_GLYPH_CELL := 40.0
 const UI_GLYPH_BASE := 32.0
 const PORTRAIT_LAYOUT_ENABLED := true
 
+
+var map_visible: bool = true
 
 func _ready() -> void:
 	rng.randomize()
@@ -110,6 +128,7 @@ func _ready() -> void:
 		get_tree().quit(0 if regression_all_pass else 2)
 		return
 	ui_glyph_texture = load("res://ui_glyphs.png") as Texture2D
+	load_optional_entity_art()
 	load_meta()
 	apply_permanent_stats()
 	if load_run_state():
@@ -117,6 +136,25 @@ func _ready() -> void:
 	queue_redraw()
 
 
+
+
+func load_optional_entity_art() -> void:
+	entity_art.clear()
+	for key in ENTITY_ART_PATHS.keys():
+		var path := str(ENTITY_ART_PATHS[key])
+		if ResourceLoader.exists(path):
+			var tex := load(path) as Texture2D
+			if tex != null:
+				entity_art[key] = tex
+
+
+func draw_entity_visual(center: Vector2, art_key: String, fallback: String, font_size: int, color: Color, tile_size: float) -> void:
+	if entity_art.has(art_key):
+		var tex: Texture2D = entity_art[art_key]
+		var size := max(12.0, tile_size - 2.0)
+		draw_texture_rect(tex, Rect2(center - Vector2(size, size) * 0.5, Vector2(size, size)), false)
+	else:
+		draw_ui_text(center + Vector2(-8, 6), fallback, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 
 const UI_GLYPH_MAP := {
@@ -512,7 +550,21 @@ const UI_GLYPH_MAP := {
 	"形": Vector2i(5, 12),
 	"日": Vector2i(6, 12),
 	"本": Vector2i(7, 12),
-	"語": Vector2i(8, 12)
+	"語": Vector2i(8, 12),
+	"次": Vector2i(9, 12),
+	"降": Vector2i(10, 12),
+	"具": Vector2i(0, 13),
+	"用": Vector2i(1, 13),
+	"識": Vector2i(2, 13),
+	"別": Vector2i(3, 13),
+	"持": Vector2i(4, 13),
+	"確": Vector2i(5, 13),
+	"画": Vector2i(6, 13),
+	"済": Vector2i(7, 13),
+	"袋": Vector2i(8, 13),
+	"得": Vector2i(9, 13),
+	"認": Vector2i(10, 13),
+	"閉": Vector2i(11, 13)
 }
 
 
@@ -558,7 +610,7 @@ func apply_permanent_stats() -> void:
 
 
 func _process(delta: float) -> void:
-	if hide_hold_active and not in_village and not checkout_prompt and not ad_menu:
+	if hide_hold_active and not in_village and not checkout_prompt and not stairs_prompt and not ad_menu and not inventory_menu:
 		hide_hold_elapsed += delta
 		if hide_hold_elapsed >= HIDE_HOLD_INTERVAL:
 			hide_hold_elapsed = 0.0
@@ -581,11 +633,22 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		handle_village_input(event)
 		return
 
+	if inventory_menu:
+		handle_inventory_key(event)
+		return
+
 	if checkout_prompt:
 		if event.keycode == KEY_Y:
 			confirm_checkout(true)
 		elif event.keycode == KEY_N or event.keycode == KEY_ESCAPE:
 			confirm_checkout(false)
+		return
+
+	if stairs_prompt:
+		if event.keycode == KEY_Y or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+			confirm_stairs(true)
+		elif event.keycode == KEY_N or event.keycode == KEY_ESCAPE:
+			confirm_stairs(false)
 		return
 
 	if ad_menu:
@@ -610,6 +673,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	elif event.keycode == KEY_3:
 		style_name = "術"
 		message = "忍道：術"
+	elif event.keycode == KEY_I:
+		open_inventory()
 	elif event.keycode == KEY_G:
 		pickup()
 	elif event.keycode == KEY_B:
@@ -625,7 +690,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	elif event.keycode == KEY_X:
 		use_ultimate()
 	elif event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
-		use_stairs()
+		request_stairs_confirmation()
 	elif DEVELOPMENT_UI_ENABLED and (event.keycode == KEY_F12 or event.keycode == KEY_T):
 		debug_run_regression_suite()
 	elif DEVELOPMENT_UI_ENABLED and debug_mode and event.keycode == KEY_F2:
@@ -692,7 +757,10 @@ func handle_press(pos: Vector2) -> void:
 	if in_village:
 		handle_village_touch(pos)
 		return
-	if checkout_prompt or ad_menu:
+	if inventory_menu:
+		handle_inventory_touch(pos, false)
+		return
+	if checkout_prompt or stairs_prompt or ad_menu:
 		handle_modal_touch(pos)
 		return
 	if is_hide_button_position(pos):
@@ -799,6 +867,12 @@ func handle_modal_touch(pos: Vector2) -> void:
 		elif Rect2(590, 390, 160, 54).has_point(pos):
 			confirm_checkout(false)
 		return
+	if stairs_prompt:
+		if Rect2(350, 390, 160, 54).has_point(pos):
+			confirm_stairs(true)
+		elif Rect2(590, 390, 160, 54).has_point(pos):
+			confirm_stairs(false)
+		return
 	if ad_menu:
 		if Rect2(255, 355, 130, 54).has_point(pos):
 			apply_ad_reward("A")
@@ -813,6 +887,25 @@ func handle_modal_touch(pos: Vector2) -> void:
 
 
 func handle_touch(pos: Vector2) -> void:
+	var diamond_actions_landscape = [
+		[Rect2(714, 566, 48, 48), "inventory"],
+		[Rect2(660, 618, 48, 48), "trap"],
+		[Rect2(768, 618, 48, 48), "throw"],
+		[Rect2(714, 670, 48, 42), "suspend"]
+	]
+	for d_action in diamond_actions_landscape:
+		var d_rect: Rect2 = d_action[0]
+		if d_rect.has_point(pos):
+			var d_name = str(d_action[1])
+			if d_name == "inventory": open_inventory()
+			elif d_name == "trap": place_trap()
+			elif d_name == "throw": use_projectile()
+			elif d_name == "suspend": suspend_run()
+			queue_redraw()
+			return
+	if Rect2(930, 82, 100, 38).has_point(pos):
+		toggle_map_visibility()
+		return
 	var base = Vector2(PAD_X, PAD_Y)
 	var cell = float(PAD_CELL)
 	if pos.x >= base.x and pos.x < base.x + cell * 3.0 and pos.y >= base.y and pos.y < base.y + cell * 3.0:
@@ -820,21 +913,20 @@ func handle_touch(pos: Vector2) -> void:
 		var cy = int((pos.y - base.y) / cell)
 		var d = Vector2i(cx - 1, cy - 1)
 		if d == Vector2i.ZERO:
-			end_turn()
+			hide_one_turn()
 		else:
 			try_move(d)
 		return
 
 	var buttons = [
-		{"rect": Rect2(20, 662, 78, 42), "action": "pickup"},
-		{"rect": Rect2(104, 662, 78, 42), "action": "stairs"},
-		{"rect": Rect2(188, 662, 78, 42), "action": "ultimate"},
-		{"rect": Rect2(272, 662, 78, 42), "action": "buy"},
-		{"rect": Rect2(356, 662, 78, 42), "action": "hide"},
-		{"rect": Rect2(440, 662, 86, 42), "action": "bind"},
-		{"rect": Rect2(532, 662, 68, 42), "action": "smoke"},
-		{"rect": Rect2(606, 662, 78, 42), "action": "clone"},
-		{"rect": Rect2(690, 662, 72, 42), "action": "ad"},
+		{"rect": Rect2(20, 662, 70, 42), "action": "stairs"},
+		{"rect": Rect2(94, 662, 70, 42), "action": "ultimate"},
+		{"rect": Rect2(168, 662, 70, 42), "action": "buy"},
+		{"rect": Rect2(242, 662, 70, 42), "action": "hide"},
+		{"rect": Rect2(316, 662, 70, 42), "action": "bind"},
+		{"rect": Rect2(390, 662, 70, 42), "action": "smoke"},
+		{"rect": Rect2(464, 662, 70, 42), "action": "clone"},
+		{"rect": Rect2(538, 662, 70, 42), "action": "ad"},
 		{"rect": Rect2(790, 82, 130, 38), "action": "regression"},
 		{"rect": Rect2(970, 570, 120, 40), "action": "style_bu"},
 		{"rect": Rect2(970, 616, 120, 40), "action": "style_kage"},
@@ -844,7 +936,9 @@ func handle_touch(pos: Vector2) -> void:
 		var rect: Rect2 = b["rect"]
 		if rect.has_point(pos):
 			var action = str(b["action"])
-			if action == "pickup":
+			if action == "inventory":
+				open_inventory()
+			elif action == "pickup":
 				pickup()
 			elif action == "stairs":
 				use_stairs()
@@ -860,6 +954,10 @@ func handle_touch(pos: Vector2) -> void:
 				use_smoke_ninjutsu()
 			elif action == "clone":
 				use_shadow_clone()
+			elif action == "throw":
+				use_projectile()
+			elif action == "trap":
+				place_trap()
 			elif action == "ad":
 				open_ad()
 			elif action == "regression":
@@ -971,6 +1069,10 @@ func generate_floor() -> void:
 	explored.clear()
 	enemies.clear()
 	items.clear()
+	inventory_items.clear()
+	placed_traps.clear()
+	inventory_menu = false
+	inventory_selected = 0
 	unpaid_items.clear()
 	shop_items.clear()
 	shop_active = false
@@ -1251,10 +1353,14 @@ func try_move(dir: Vector2i) -> void:
 	var was_inside = is_inside_shop(player)
 	player = target
 	on_player_walked()
+	if cell_has_item(player):
+		pickup(false)
 	var now_inside = is_inside_shop(player)
 	if was_inside and not now_inside and unpaid_items.size() > 0:
 		try_theft_escape()
 	end_turn()
+	if not in_village and player == stairs_pos:
+		request_stairs_confirmation()
 
 
 func attack_enemy(index: int) -> void:
@@ -1304,6 +1410,7 @@ func end_turn() -> void:
 			enemies[i]["bound"] = int(enemies[i]["bound"]) - 1
 
 	move_enemies()
+	trigger_enemy_traps()
 
 	if smoke_turns > 0:
 		smoke_turns -= 1
@@ -1396,7 +1503,7 @@ func handle_death(cause: String) -> void:
 	return_village(cause)
 
 
-func pickup() -> void:
+func pickup(consume_turn: bool = true) -> void:
 	var found = -1
 	for i in range(items.size()):
 		if items[i]["pos"] == player:
@@ -1411,9 +1518,172 @@ func pickup() -> void:
 		unpaid_items.append(item)
 		message = "%sを手に取った。未精算。" % str(item["name"])
 	else:
-		apply_item_effect(str(item["name"]))
-	end_turn()
+		add_inventory_item(str(item["name"]), false)
+		message = "%sを拾った。" % str(item["name"])
+	if consume_turn:
+		end_turn()
 
+
+func valid_inventory_item_name(name: String) -> bool:
+	return name in ["薬", "兵糧丸", "忍気丸", "上薬", "大兵糧丸", "小巻物", "中巻物", "大巻物", "究極巻物"]
+
+
+func add_inventory_item(name: String, identified: bool = false) -> void:
+	if not valid_inventory_item_name(name):
+		return
+	inventory_items.append({"name": name, "identified": identified})
+
+
+func sanitize_inventory_array(value: Variant) -> Array:
+	var out: Array = []
+	if typeof(value) != TYPE_ARRAY:
+		return out
+	for raw in value:
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		var name := str(raw.get("name", ""))
+		if valid_inventory_item_name(name):
+			out.append({"name": name, "identified": bool(raw.get("identified", false))})
+	return out
+
+
+func inventory_entry_count() -> int:
+	return 2 + inventory_items.size()
+
+
+func inventory_selected_name() -> String:
+	if inventory_selected == 0:
+		return WEAPON_NAME
+	if inventory_selected == 1:
+		return ARMOR_NAME
+	var idx := inventory_selected - 2
+	if idx >= 0 and idx < inventory_items.size():
+		return str(inventory_items[idx].get("name", ""))
+	return ""
+
+
+func open_inventory() -> void:
+	if in_village or checkout_prompt or stairs_prompt or ad_menu:
+		return
+	inventory_menu = true
+	inventory_selected = clamp(inventory_selected, 0, max(0, inventory_entry_count() - 1))
+	message = "道具を確認する。"
+	queue_redraw()
+
+
+func close_inventory() -> void:
+	inventory_menu = false
+	message = "道具画面を閉じた。"
+	queue_redraw()
+
+
+func inventory_equip_selected() -> void:
+	if inventory_selected == 0 or inventory_selected == 1:
+		message = "%sは装備中。" % inventory_selected_name()
+	else:
+		message = "この道具は装備できない。"
+	queue_redraw()
+
+
+func inventory_use_selected(consume_turn: bool = true) -> void:
+	var idx := inventory_selected - 2
+	if idx < 0 or idx >= inventory_items.size():
+		message = "装備品は使用できない。"
+		queue_redraw()
+		return
+	var name := str(inventory_items[idx].get("name", ""))
+	inventory_items.remove_at(idx)
+	apply_item_effect(name)
+	inventory_selected = clamp(inventory_selected, 0, max(0, inventory_entry_count() - 1))
+	inventory_menu = false
+	if consume_turn:
+		end_turn()
+	queue_redraw()
+
+
+func inventory_identify_selected() -> void:
+	var idx := inventory_selected - 2
+	if idx < 0 or idx >= inventory_items.size():
+		message = "%sは識別済み。" % inventory_selected_name()
+		queue_redraw()
+		return
+	inventory_items[idx]["identified"] = true
+	message = "%sを識別した。" % str(inventory_items[idx].get("name", ""))
+	queue_redraw()
+
+
+func handle_inventory_key(event: InputEvent) -> void:
+	if event.keycode == KEY_ESCAPE or event.keycode == KEY_I:
+		close_inventory()
+	elif event.keycode == KEY_UP:
+		inventory_selected = max(0, inventory_selected - 1)
+	elif event.keycode == KEY_DOWN:
+		inventory_selected = min(max(0, inventory_entry_count() - 1), inventory_selected + 1)
+	elif event.keycode == KEY_E:
+		inventory_equip_selected()
+	elif event.keycode == KEY_U or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+		inventory_use_selected()
+	elif event.keycode == KEY_D:
+		inventory_identify_selected()
+	queue_redraw()
+
+
+func handle_inventory_touch(pos: Vector2, portrait: bool) -> void:
+	var panel_x := 60.0 if portrait else 270.0
+	var panel_y := 225.0 if portrait else 120.0
+	var row_h := 46.0
+	var max_rows := 7
+	for i in range(min(inventory_entry_count(), max_rows)):
+		var r := Rect2(panel_x + 20.0, panel_y + 74.0 + i * row_h, 500.0, 40.0)
+		if r.has_point(pos):
+			inventory_selected = i
+			queue_redraw()
+			return
+	var action_y := panel_y + 420.0
+	var actions = [["equip", panel_x + 20.0], ["use", panel_x + 150.0], ["identify", panel_x + 280.0], ["back", panel_x + 410.0]]
+	for action in actions:
+		if Rect2(float(action[1]), action_y, 115.0, 52.0).has_point(pos):
+			match str(action[0]):
+				"equip": inventory_equip_selected()
+				"use": inventory_use_selected()
+				"identify": inventory_identify_selected()
+				"back": close_inventory()
+			return
+
+
+func inventory_display_name(index: int) -> String:
+	if index == 0:
+		return "%s（装備中）" % WEAPON_NAME
+	if index == 1:
+		return "%s（装備中）" % ARMOR_NAME
+	var idx := index - 2
+	if idx < 0 or idx >= inventory_items.size():
+		return ""
+	var entry: Dictionary = inventory_items[idx]
+	return str(entry.get("name", "")) if bool(entry.get("identified", false)) else "未識別の道具"
+
+
+func draw_inventory_overlay(portrait: bool) -> void:
+	var panel_x := 60.0 if portrait else 270.0
+	var panel_y := 225.0 if portrait else 120.0
+	var panel_w := 560.0
+	draw_rect(Rect2(panel_x, panel_y, panel_w, 500.0), Color(0.05, 0.07, 0.09, 0.98))
+	draw_rect(Rect2(panel_x, panel_y, panel_w, 500.0), Color("#e4cf7a"), false, 2.0)
+	draw_ui_text(Vector2(panel_x + 22.0, panel_y + 48.0), "道具 %d点" % inventory_items.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color.WHITE)
+	var row_h := 46.0
+	var max_rows := 7
+	for i in range(min(inventory_entry_count(), max_rows)):
+		var r := Rect2(panel_x + 20.0, panel_y + 74.0 + i * row_h, 500.0, 40.0)
+		draw_rect(r, Color("#343527") if i == inventory_selected else Color("#202934"))
+		draw_rect(r, Color("#dbc66e") if i == inventory_selected else Color("#4c5865"), false, 1.5)
+		draw_ui_text(r.position + Vector2(12, 27), inventory_display_name(i), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
+	var action_y := panel_y + 420.0
+	var labels = [["装備", panel_x + 20.0], ["使用", panel_x + 150.0], ["識別", panel_x + 280.0], ["戻る", panel_x + 410.0]]
+	for action in labels:
+		var r := Rect2(float(action[1]), action_y, 115.0, 52.0)
+		draw_rect(r, Color("#252c35"))
+		draw_rect(r, Color("#596575"), false, 1.5)
+		draw_ui_text(r.position + Vector2(22, 34), str(action[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
 
 func item_shop_price(name: String) -> int:
 	if name == "薬":
@@ -1501,9 +1771,9 @@ func confirm_checkout(yes: bool) -> void:
 	run_coins -= from_run
 	coins -= total - from_run
 	for item in unpaid_items:
-		apply_item_effect(str(item["name"]))
+		add_inventory_item(str(item["name"]), false)
 	unpaid_items.clear()
-	message = "精算した。"
+	message = "精算した。道具袋に入れた。"
 	save_run_state()
 	queue_redraw()
 
@@ -1519,7 +1789,7 @@ func try_theft_escape() -> void:
 	var stolen_count = unpaid_items.size()
 	for item in unpaid_items:
 		if typeof(item) == TYPE_DICTIONARY:
-			apply_item_effect(str(item.get("name", "")))
+			add_inventory_item(str(item.get("name", "")), false)
 	unpaid_items.clear()
 	message = "%d点を盗んだ！ 商人が追ってくる。" % stolen_count
 	save_run_state()
@@ -1584,6 +1854,43 @@ func use_shadow_bind() -> void:
 	end_turn()
 
 
+func use_projectile() -> void:
+	var best_index := -1
+	var best_dist := 999
+	for i in range(enemies.size()):
+		var ep: Vector2i = enemies[i]["pos"]
+		var d := ep - player
+		var aligned := d.x == 0 or d.y == 0 or abs(d.x) == abs(d.y)
+		var dist := max(abs(d.x), abs(d.y))
+		if aligned and dist > 0 and dist <= 5 and has_clear_shot(player, ep, 5):
+			if dist < best_dist:
+				best_dist = dist
+				best_index = i
+	if best_index < 0:
+		message = "飛び道具の射線に敵がいない。"
+		return
+	attack_enemy(best_index)
+	end_turn()
+
+func place_trap() -> void:
+	for trap in placed_traps:
+		if trap == player:
+			message = "ここには既に罠がある。"
+			return
+	placed_traps.append(player)
+	message = "足元に罠を設置した。"
+	end_turn()
+
+func trigger_enemy_traps() -> void:
+	for i in range(enemies.size()):
+		var ep: Vector2i = enemies[i]["pos"]
+		var trap_index := placed_traps.find(ep)
+		if trap_index >= 0:
+			enemies[i]["bound"] = max(2, int(enemies[i].get("bound", 0)))
+			placed_traps.remove_at(trap_index)
+			message = "%sが罠にかかった。" % str(enemies[i]["name"])
+			return
+
 func hide_one_turn() -> void:
 	if ninja_energy < 10:
 		message = "忍気が足りない。"
@@ -1625,6 +1932,27 @@ func use_ultimate() -> void:
 					boss_defeated = true
 	message = "奥義・影滅！"
 	end_turn()
+
+
+func request_stairs_confirmation() -> void:
+	if player != stairs_pos:
+		message = "階段の上にいない。"
+		return
+	if boss_spawned and not boss_defeated:
+		message = "ボスを倒さなければ進めない。"
+		return
+	stairs_prompt = true
+	message = "次の階に降りますか？"
+	queue_redraw()
+
+
+func confirm_stairs(yes: bool) -> void:
+	stairs_prompt = false
+	if not yes:
+		message = "この階にいる。"
+		queue_redraw()
+		return
+	use_stairs()
 
 
 func use_stairs() -> void:
@@ -1788,6 +2116,17 @@ func item_position_taken(p: Vector2i, current: Array) -> bool:
 	return false
 
 
+func sanitize_vector2i_array(value: Variant) -> Array:
+	var out: Array = []
+	if typeof(value) != TYPE_ARRAY:
+		return out
+	for entry in value:
+		if entry is Vector2i:
+			out.append(entry)
+		elif entry is Vector2:
+			out.append(Vector2i(int(entry.x), int(entry.y)))
+	return out
+
 func sanitize_enemy_array(value: Variant) -> Array:
 	var out: Array = []
 	if typeof(value) != TYPE_ARRAY:
@@ -1924,6 +2263,8 @@ func build_run_state() -> Dictionary:
 		"explored": explored,
 		"enemies": enemies,
 		"items": items,
+		"inventory_items": inventory_items,
+		"placed_traps": placed_traps,
 		"shop_active": shop_active,
 		"shop_hostile": shop_hostile,
 		"merchant_type": merchant_type,
@@ -1945,6 +2286,12 @@ func build_run_state() -> Dictionary:
 		"ad_boost_uses": ad_boost_uses,
 		"last_ad_checkpoint_floor": last_ad_checkpoint_floor
 	}
+
+
+func suspend_run() -> void:
+	save_run_state()
+	message = "中断セーブした。"
+	queue_redraw()
 
 
 func save_run_state() -> void:
@@ -2001,6 +2348,10 @@ func load_run_state() -> bool:
 	defense_power = max(0, int(data.get("defense_power", 1 + perm_defense)))
 	enemies = sanitize_enemy_array(data.get("enemies", []))
 	items = sanitize_item_array(data.get("items", []))
+	inventory_items = sanitize_inventory_array(data.get("inventory_items", [])) if version >= 5 else []
+	placed_traps = sanitize_vector2i_array(data.get("placed_traps", [])) if version >= 5 else []
+	inventory_menu = false
+	inventory_selected = 0
 	shop_active = bool(data.get("shop_active", false))
 	shop_hostile = bool(data.get("shop_hostile", false))
 	merchant_type = str(data.get("merchant_type", "旅商人"))
@@ -2092,7 +2443,7 @@ func debug_capture_runtime_state() -> Dictionary:
 		"attack_power": attack_power, "defense_power": defense_power,
 		"in_village": in_village, "village_menu": village_menu,
 		"map": map.duplicate(true), "explored": explored.duplicate(true),
-		"enemies": enemies.duplicate(true), "items": items.duplicate(true),
+		"enemies": enemies.duplicate(true), "items": items.duplicate(true), "inventory_items": inventory_items.duplicate(true), "placed_traps": placed_traps.duplicate(true),
 		"shop_active": shop_active, "shop_hostile": shop_hostile, "merchant_type": merchant_type, "shop_rect": shop_rect,
 		"shopkeeper": shopkeeper.duplicate(true), "shopkeeper_home": shopkeeper_home,
 		"shop_items": shop_items.duplicate(true), "unpaid_items": unpaid_items.duplicate(true),
@@ -2131,6 +2482,10 @@ func debug_restore_runtime_state(state: Dictionary) -> void:
 	explored = state["explored"].duplicate(true)
 	enemies = state["enemies"].duplicate(true)
 	items = state["items"].duplicate(true)
+	inventory_items = state.get("inventory_items", []).duplicate(true)
+	placed_traps = state.get("placed_traps", []).duplicate(true)
+	inventory_menu = false
+	inventory_selected = 0
 	shop_active = bool(state["shop_active"])
 	shop_hostile = bool(state["shop_hostile"])
 	merchant_type = str(state["merchant_type"])
@@ -2166,7 +2521,7 @@ func debug_restore_runtime_state(state: Dictionary) -> void:
 func debug_test_save_contract() -> String:
 	generate_floor()
 	var data = build_run_state()
-	var required = ["player", "stairs_pos", "map", "explored", "enemies", "items", "unpaid_items", "merchant_bound_turns", "clone_active", "clone_pos", "clone_steps_left", "merchant_type", "last_ad_checkpoint_floor"]
+	var required = ["player", "stairs_pos", "map", "explored", "enemies", "items", "inventory_items", "placed_traps", "unpaid_items", "merchant_bound_turns", "clone_active", "clone_pos", "clone_steps_left", "merchant_type", "last_ad_checkpoint_floor"]
 	for key in required:
 		if not data.has(key):
 			return "FAIL 保存契約:%s" % key
@@ -2235,12 +2590,11 @@ func debug_test_reward_banking() -> String:
 func debug_test_shop_theft() -> String:
 	generate_floor()
 	generate_shop()
-	hp = max(1, max_hp - 10)
-	var before_hp = hp
+	inventory_items = []
 	unpaid_items = [{"name": "薬", "price": 8, "shop": true}]
 	shop_hostile = false
 	try_theft_escape()
-	var ok = shop_hostile and unpaid_items.is_empty() and hp > before_hp
+	var ok = shop_hostile and unpaid_items.is_empty() and inventory_items.size() == 1 and str(inventory_items[0].get("name", "")) == "薬"
 	return "PASS 盗み" if ok else "FAIL 盗み"
 
 
@@ -2311,6 +2665,25 @@ func debug_test_item_catalog() -> String:
 		if item_shop_price(item_name) <= 0:
 			return "FAIL アイテム価格"
 	return "PASS アイテム一覧"
+
+
+func debug_test_inventory_contract() -> String:
+	inventory_items = []
+	add_inventory_item("薬", false)
+	if inventory_items.size() != 1 or bool(inventory_items[0].get("identified", true)):
+		return "FAIL 道具取得"
+	inventory_selected = 2
+	inventory_identify_selected()
+	if not bool(inventory_items[0].get("identified", false)):
+		return "FAIL 道具識別"
+	hp = max(1, max_hp - 10)
+	var before_hp := hp
+	inventory_use_selected(false)
+	if not inventory_items.is_empty() or hp <= before_hp:
+		return "FAIL 道具使用"
+	inventory_selected = 0
+	inventory_equip_selected()
+	return "PASS 道具装備使用識別" if message.find("装備中") >= 0 else "FAIL 道具装備"
 
 
 func debug_test_spawn_safety() -> String:
@@ -2412,7 +2785,7 @@ func debug_test_research_contract() -> String:
 
 
 func debug_test_ui_glyph_contract() -> String:
-	var required := "忍道里魂銭恒久攻撃防御初期気鍛冶屋術研究所録帳成長出陣階段奥義精算隠身縛影煙分待方向操作機能ップ"
+	var required := "忍道里魂銭恒久攻撃防御初期気鍛冶屋術研究所録帳成長出陣階段奥義精算隠身縛影煙分隠飛罠方向操作機能ップ具装備使用識別戻持物未点"
 	for i in range(required.length()):
 		var ch := required.substr(i, 1)
 		if not UI_GLYPH_MAP.has(ch):
@@ -2436,6 +2809,7 @@ func debug_run_regression_suite() -> void:
 		debug_test_enemy_curve(),
 		debug_test_ranged_line(),
 		debug_test_item_catalog(),
+		debug_test_inventory_contract(),
 		debug_test_boss_gate(),
 		debug_test_spawn_safety(),
 		debug_test_boss_resume_repair(),
@@ -2473,13 +2847,35 @@ func portrait_cell_center(p: Vector2i) -> Vector2:
 
 
 func handle_press_portrait(pos: Vector2) -> void:
+	var diamond_actions = [
+		[Rect2(404, 646, 52, 52), "inventory"],
+		[Rect2(348, 704, 52, 52), "trap"],
+		[Rect2(444, 704, 52, 52), "throw"],
+		[Rect2(404, 762, 52, 52), "suspend"]
+	]
+	for d_action in diamond_actions:
+		var d_rect: Rect2 = d_action[0]
+		if d_rect.has_point(pos):
+			var d_name := str(d_action[1])
+			if d_name == "inventory": open_inventory()
+			elif d_name == "trap": place_trap()
+			elif d_name == "throw": use_projectile()
+			elif d_name == "suspend": suspend_run()
+			queue_redraw()
+			return
+	if Rect2(604, 136, 82, 38).has_point(pos):
+		toggle_map_visibility()
+		return
 	if in_village:
 		handle_village_touch_portrait(pos)
 		return
-	if checkout_prompt or ad_menu:
+	if inventory_menu:
+		handle_inventory_touch(pos, true)
+		return
+	if checkout_prompt or stairs_prompt or ad_menu:
 		handle_modal_touch_portrait(pos)
 		return
-	var hide_r := Rect2(180, 715, 145, 55)
+	var hide_r := Rect2(174, 710, 140, 50)
 	if hide_r.has_point(pos):
 		hide_hold_active = true
 		hide_hold_elapsed = HIDE_HOLD_INTERVAL
@@ -2491,21 +2887,23 @@ func handle_press_portrait(pos: Vector2) -> void:
 		var cy := int((pos.y - base.y) / cell)
 		var d := Vector2i(cx - 1, cy - 1)
 		if d == Vector2i.ZERO:
-			end_turn()
+			hide_one_turn()
 		else:
 			try_move(d)
 		return
 	var acts = [
-		[Rect2(20,650,145,55),"pickup"], [Rect2(180,650,145,55),"stairs"], [Rect2(340,650,145,55),"ultimate"],
-		[Rect2(20,715,145,55),"buy"], [Rect2(180,715,145,55),"hide"], [Rect2(340,715,145,55),"bind"],
-		[Rect2(20,780,145,55),"smoke"], [Rect2(180,780,145,55),"clone"], [Rect2(340,780,145,55),"ad"],
-		[Rect2(20,855,145,55),"style_bu"], [Rect2(180,855,145,55),"style_kage"], [Rect2(340,855,145,55),"style_jutsu"]
+		[Rect2(20,650,140,50),"stairs"], [Rect2(174,650,140,50),"ultimate"],
+		[Rect2(20,710,140,50),"buy"], [Rect2(174,710,140,50),"hide"],
+		[Rect2(20,770,140,50),"bind"], [Rect2(174,770,140,50),"smoke"],
+		[Rect2(20,830,140,50),"clone"], [Rect2(174,830,140,50),"ad"],
+		[Rect2(20,900,140,54),"style_bu"], [Rect2(174,900,140,54),"style_kage"], [Rect2(328,900,140,54),"style_jutsu"]
 	]
 	for a in acts:
 		var r: Rect2 = a[0]
 		if r.has_point(pos):
 			var action := str(a[1])
-			if action == "pickup": pickup()
+			if action == "inventory": open_inventory()
+			elif action == "pickup": pickup()
 			elif action == "stairs": use_stairs()
 			elif action == "ultimate": use_ultimate()
 			elif action == "buy": buy_unpaid()
@@ -2513,6 +2911,8 @@ func handle_press_portrait(pos: Vector2) -> void:
 			elif action == "bind": use_shadow_bind()
 			elif action == "smoke": use_smoke_ninjutsu()
 			elif action == "clone": use_shadow_clone()
+			elif action == "throw": use_projectile()
+			elif action == "trap": place_trap()
 			elif action == "ad": open_ad()
 			elif action == "style_bu":
 				style_name = "武"
@@ -2567,6 +2967,10 @@ func handle_modal_touch_portrait(pos: Vector2) -> void:
 	if checkout_prompt:
 		if Rect2(100, 555, 220, 70).has_point(pos): confirm_checkout(true)
 		elif Rect2(400, 555, 220, 70).has_point(pos): confirm_checkout(false)
+		return
+	if stairs_prompt:
+		if Rect2(100, 555, 220, 70).has_point(pos): confirm_stairs(true)
+		elif Rect2(400, 555, 220, 70).has_point(pos): confirm_stairs(false)
 		return
 	if ad_menu:
 		var rects = [Rect2(80,500,250,70),Rect2(390,500,250,70),Rect2(80,590,250,70),Rect2(390,590,250,70)]
@@ -2671,124 +3075,6 @@ func draw_dungeon_tile(p: Vector2, tile: String, seen: bool, x: int, y: int, til
 			draw_line(p + Vector2(4, tile_size - 5), p + Vector2(tile_size - 5, tile_size - 5), Color("#5a4c37"), 1.0)
 
 
-func draw_triangle(points: PackedVector2Array, color: Color) -> void:
-	draw_colored_polygon(points, color)
-
-
-func draw_player_token(center: Vector2, size: float) -> void:
-	var r := size * 0.40
-	# Approved protagonist: black hood, red scarf, silver forehead protector, sharp brown eyes.
-	draw_triangle(PackedVector2Array([center + Vector2(-r, r * 0.58), center + Vector2(r, r * 0.58), center + Vector2(0, r * 1.02)]), Color("#b9282f"))
-	draw_circle(center, r, Color("#1e1c1d"))
-	draw_circle(center + Vector2(0, r * 0.10), r * 0.62, Color("#ead1b8"))
-	draw_rect(Rect2(center + Vector2(-r * 0.63, -r * 0.62), Vector2(r * 1.26, r * 0.34)), Color("#aeb5ba"))
-	draw_rect(Rect2(center + Vector2(-r * 0.63, -r * 0.62), Vector2(r * 1.26, r * 0.34)), Color("#2c3033"), false, max(1.0, size * 0.045))
-	var eye_y := center.y + r * 0.08
-	draw_line(Vector2(center.x - r * 0.43, eye_y - r * 0.08), Vector2(center.x - r * 0.08, eye_y), Color("#3b241b"), max(1.2, size * 0.07))
-	draw_line(Vector2(center.x + r * 0.08, eye_y), Vector2(center.x + r * 0.43, eye_y - r * 0.08), Color("#3b241b"), max(1.2, size * 0.07))
-	draw_circle(center + Vector2(-r * 0.25, r * 0.14), max(1.0, r * 0.12), Color("#4b2b20"))
-	draw_circle(center + Vector2(r * 0.25, r * 0.14), max(1.0, r * 0.12), Color("#4b2b20"))
-
-
-func draw_hound_token(center: Vector2, size: float, dark_variant: bool = false) -> void:
-	var r := size * 0.36
-	var fur := Color("#2c2929") if dark_variant else Color("#c98746")
-	var face := Color("#d9c0a6") if dark_variant else Color("#f0d6ae")
-	var scarf := Color("#8e2731") if dark_variant else Color("#b9282f")
-	draw_triangle(PackedVector2Array([center + Vector2(-r * 0.76, -r * 0.38), center + Vector2(-r * 0.38, -r * 1.02), center + Vector2(-r * 0.12, -r * 0.38)]), fur)
-	draw_triangle(PackedVector2Array([center + Vector2(r * 0.12, -r * 0.38), center + Vector2(r * 0.38, -r * 1.02), center + Vector2(r * 0.76, -r * 0.38)]), fur)
-	draw_triangle(PackedVector2Array([center + Vector2(-r, r * 0.62), center + Vector2(r, r * 0.62), center + Vector2(0, r * 0.95)]), scarf)
-	draw_circle(center, r, fur)
-	draw_circle(center + Vector2(0, r * 0.13), r * 0.60, face)
-	draw_rect(Rect2(center + Vector2(-r * 0.72, -r * 0.60), Vector2(r * 1.44, r * 0.31)), Color("#aeb5ba"))
-	draw_circle(center + Vector2(-r * 0.23, r * 0.08), max(1.0, r * 0.11), Color("#241918"))
-	draw_circle(center + Vector2(r * 0.23, r * 0.08), max(1.0, r * 0.11), Color("#241918"))
-	draw_circle(center + Vector2(0, r * 0.32), max(1.0, r * 0.10), Color("#191516"))
-
-
-func draw_enemy_token(center: Vector2, size: float, enemy: Dictionary) -> void:
-	var kind := str(enemy.get("kind", "legacy"))
-	var is_boss := bool(enemy.get("boss", false))
-	var name := str(enemy.get("name", "敵"))
-	if kind == "hound":
-		draw_hound_token(center, size, floor_no >= 40)
-		return
-	var r := size * (0.43 if is_boss else 0.38)
-	var hood := Color("#20252b")
-	var scarf := Color("#2f5b88")
-	if kind == "archer":
-		hood = Color("#2c202c")
-		scarf = Color("#7e315f")
-	elif kind == "shadow":
-		hood = Color("#211b29")
-		scarf = Color("#644784")
-	elif kind == "elite":
-		hood = Color("#251c1b")
-		scarf = Color("#8e2731")
-	if is_boss:
-		if "鬼面" in name:
-			hood = Color("#7f2b25")
-			scarf = Color("#d09b5b")
-		elif "鎧" in name:
-			hood = Color("#2b211b")
-			scarf = Color("#b84a32")
-		elif "影" in name:
-			hood = Color("#251c31")
-			scarf = Color("#734d98")
-		else:
-			hood = Color("#3b2024")
-			scarf = Color("#a12c31")
-		draw_circle(center, r + size * 0.05, Color("#d6b36a"))
-	draw_triangle(PackedVector2Array([center + Vector2(-r, r * 0.62), center + Vector2(r, r * 0.62), center + Vector2(0, r * 0.98)]), scarf)
-	draw_circle(center, r, hood)
-	draw_circle(center + Vector2(0, r * 0.12), r * 0.58, Color("#e5c8ad"))
-	draw_rect(Rect2(center + Vector2(-r * 0.68, -r * 0.60), Vector2(r * 1.36, r * 0.30)), Color("#a9afb3"))
-	var eye := Color("#53251d") if not is_boss else Color("#8d1f1f")
-	draw_line(center + Vector2(-r * 0.42, r * 0.01), center + Vector2(-r * 0.10, r * 0.08), eye, max(1.0, size * 0.065))
-	draw_line(center + Vector2(r * 0.10, r * 0.08), center + Vector2(r * 0.42, r * 0.01), eye, max(1.0, size * 0.065))
-	if kind == "archer":
-		draw_line(center + Vector2(r * 0.65, -r * 0.15), center + Vector2(r * 0.95, r * 0.25), Color("#c1c6cb"), 1.2)
-
-
-func draw_merchant_token(center: Vector2, size: float, dark: bool) -> void:
-	var r := size * 0.38
-	if dark:
-		draw_triangle(PackedVector2Array([center + Vector2(-r, r * 0.7), center + Vector2(r, r * 0.7), center + Vector2(0, r * 1.0)]), Color("#5c4679"))
-		draw_circle(center, r, Color("#211d27"))
-		draw_circle(center + Vector2(0, r * 0.12), r * 0.54, Color("#ddc2a7"))
-		draw_circle(center + Vector2(-r * 0.22, r * 0.08), max(1.0, r * 0.10), Color("#3a201d"))
-		draw_circle(center + Vector2(r * 0.22, r * 0.08), max(1.0, r * 0.10), Color("#3a201d"))
-	else:
-		draw_rect(Rect2(center + Vector2(-r * 0.65, r * 0.40), Vector2(r * 1.30, r * 0.58)), Color("#8c6844"))
-		draw_circle(center, r, Color("#d9c49d"))
-		draw_circle(center + Vector2(0, r * 0.10), r * 0.64, Color("#edcfb0"))
-		draw_rect(Rect2(center + Vector2(-r * 0.70, -r * 0.58), Vector2(r * 1.40, r * 0.25)), Color("#e7dfcb"))
-		draw_circle(center + Vector2(-r * 0.22, r * 0.10), max(1.0, r * 0.11), Color("#493027"))
-		draw_circle(center + Vector2(r * 0.22, r * 0.10), max(1.0, r * 0.11), Color("#493027"))
-
-
-func draw_item_token(center: Vector2, size: float, item_name: String) -> void:
-	var r := size * 0.34
-	if item_name in ["兵糧丸", "大兵糧丸"]:
-		draw_triangle(PackedVector2Array([center + Vector2(0, -r), center + Vector2(-r, r * 0.75), center + Vector2(r, r * 0.75)]), Color("#f1eee5"))
-		draw_rect(Rect2(center + Vector2(-r * 0.35, r * 0.22), Vector2(r * 0.70, r * 0.52)), Color("#25292a"))
-	elif "巻物" in item_name:
-		var col := Color("#71825c")
-		if item_name == "中巻物": col = Color("#4e668e")
-		elif item_name == "大巻物": col = Color("#9b553c")
-		elif item_name == "究極巻物": col = Color("#5d3d78")
-		draw_rect(Rect2(center + Vector2(-r, -r * 0.55), Vector2(r * 2.0, r * 1.10)), col)
-		draw_circle(center + Vector2(-r, 0), r * 0.30, Color("#c99c58"))
-		draw_circle(center + Vector2(r, 0), r * 0.30, Color("#c99c58"))
-	else:
-		var col := Color("#64a65e")
-		if item_name == "忍気丸": col = Color("#5d88d8")
-		elif item_name == "上薬": col = Color("#c65d5d")
-		draw_circle(center + Vector2(0, r * 0.16), r * 0.75, col)
-		draw_rect(Rect2(center + Vector2(-r * 0.28, -r * 0.95), Vector2(r * 0.56, r * 0.42)), Color("#8a6444"))
-		draw_arc(center + Vector2(0, r * 0.16), r * 0.75, 0, TAU, 16, Color("#d7c28a"), max(1.0, size * 0.045))
-
-
 func draw_dungeon_portrait() -> void:
 	const PTILE := 21
 	const PMAP_X := 34
@@ -2806,54 +3092,71 @@ func draw_dungeon_portrait() -> void:
 	draw_ui_text(Vector2(540, 66), "忍気 %d" % ninja_energy, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#e7ebef"))
 	draw_ui_text(Vector2(20, 102), "忍道:%s   銭 %d(+%d)   忍魂 %d(+%d)   T%d" % [style_name, coins, run_coins, souls, run_souls, turn_no], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#aeb7c2"))
 	draw_panel(Rect2(20, 140, 680, 382), Color("#0b0f14"), Color("#3c4650"), 2.0)
-	for y in range(MAP_H):
-		for x in range(MAP_W):
-			var p := Vector2(PMAP_X + x * PTILE, PMAP_Y + y * PTILE)
-			var seen := validate_grid(explored) and bool(explored[y][x])
-			var tile := str(map[y][x]) if validate_grid(map) else "#"
-			draw_dungeon_tile(p, tile, seen, x, y, PTILE)
-	# Approved visual direction rendered as compact original tokens at dungeon scale.
+	if map_visible:
+		for y in range(MAP_H):
+			for x in range(MAP_W):
+				var p := Vector2(PMAP_X + x * PTILE, PMAP_Y + y * PTILE)
+				var seen := validate_grid(explored) and bool(explored[y][x])
+				var tile := str(map[y][x]) if validate_grid(map) else "#"
+				draw_dungeon_tile(p, tile, seen, x, y, PTILE)
+	# Uses approved art automatically when files exist; glyphs remain safe fallback.
+	for trap in placed_traps:
+		var tp: Vector2i = trap
+		if is_visible_cell(tp):
+			draw_entity_visual(portrait_cell_center(tp), "trap", "罠", 14, Color("#e0a35c"), PTILE)
 	for item in items:
 		var ip: Vector2i = item["pos"]
 		if is_visible_cell(ip):
-			draw_item_token(portrait_cell_center(ip), PTILE * 0.92, str(item.get("name", "薬")))
+			draw_entity_visual(portrait_cell_center(ip), "item", "物", 14, Color("#f0d45f"), PTILE)
 	for e in enemies:
 		var ep: Vector2i = e["pos"]
 		if is_visible_cell(ep):
-			draw_enemy_token(portrait_cell_center(ep), PTILE * 0.96, e)
+			draw_entity_visual(portrait_cell_center(ep), "boss" if bool(e["boss"]) else "enemy", "将" if bool(e["boss"]) else "敵", 14, Color("#f08a7d"), PTILE)
 	if shopkeeper.size() > 0:
 		var sp: Vector2i = shopkeeper["pos"]
 		if is_visible_cell(sp):
-			draw_merchant_token(portrait_cell_center(sp), PTILE * 0.98, merchant_type == "闇商人")
+			draw_entity_visual(portrait_cell_center(sp), "dark_merchant" if merchant_type == "闇商人" else "merchant", "闇" if merchant_type == "闇商人" else "商", 14, Color("#c59cff") if merchant_type == "闇商人" else Color("#8ad5a2"), PTILE)
 	if clone_active and is_visible_cell(clone_pos):
-		draw_circle(portrait_cell_center(clone_pos), PTILE * 0.31, Color(0.33, 0.48, 0.72, 0.55))
-		draw_player_token(portrait_cell_center(clone_pos), PTILE * 0.86)
-	draw_player_token(portrait_cell_center(player), PTILE * 0.98)
+		draw_entity_visual(portrait_cell_center(clone_pos), "clone", "影", 14, Color("#91a9d6"), PTILE)
+	draw_entity_visual(portrait_cell_center(player), "player", "忍", 15, Color("#ffffff"), PTILE)
 	var hunger_note := "【空腹注意】" if hunger <= 20 else ""
 	draw_panel(Rect2(20, 534, 680, 96), Color("#111820"), Color("#394653"), 1.0)
 	draw_ui_text(Vector2(34, 567), message.left(44), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#e8d47f"))
 	draw_ui_text(Vector2(34, 603), "装備: %s / %s   %s" % [WEAPON_NAME, ARMOR_NAME, hunger_note], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#bbc4ce"))
 	if unpaid_items.size() > 0:
 		draw_ui_text(Vector2(420, 603), "未精算 %d点/%d銭" % [unpaid_items.size(), shop_total_unpaid()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ff9a7a"))
+	var map_button_portrait := Rect2(604, 136, 82, 38)
+	draw_panel(map_button_portrait, Color("#202934"), Color("#dbc66e") if map_visible else Color("#4c5865"), 1.5)
+	draw_ui_text(map_button_portrait.position + Vector2(14, 27), "地図", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
 	draw_mobile_controls_portrait()
-	if checkout_prompt or ad_menu:
+	if inventory_menu:
+		draw_inventory_overlay(true)
+	elif checkout_prompt or stairs_prompt or ad_menu:
 		draw_modal_overlay_portrait()
 
 
 func draw_mobile_controls_portrait() -> void:
-	var actions = [["拾", "pickup"], ["階段", "stairs"], ["奥義", "ultimate"], ["精算", "buy"], ["隠身", "hide"], ["縛影", "bind"], ["煙", "smoke"], ["分身", "clone"]]
-	if ADS_ENABLED:
-		actions.append(["広告", "ad"])
+	var actions = [["階段", "stairs"], ["奥義", "ultimate"], ["精算", "buy"], ["隠身", "hide"], ["縛影", "bind"], ["煙", "smoke"], ["分身", "clone"], ["広告", "ad"]]
 	for i in range(actions.size()):
-		var col := i % 3
-		var row := i / 3
+		var col := i % 2
+		var row := i / 2
 		var r := Rect2(20 + col * 154, 650 + row * 60, 140, 50)
 		var available := touch_action_available(str(actions[i][1]))
 		draw_panel(r, Color("#202934") if available else Color("#12171d"), Color("#4c5865") if available else Color("#252c34"), 1.5)
 		draw_ui_text(r.position + Vector2(17, 34), str(actions[i][0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("#f2f4f7") if available else Color("#59626d"))
+	var diamond_controls = [
+		["道具", Rect2(404, 646, 52, 52)],
+		["罠", Rect2(348, 704, 52, 52)],
+		["飛", Rect2(444, 704, 52, 52)],
+		["中断", Rect2(404, 762, 52, 52)]
+	]
+	for d_control in diamond_controls:
+		var dr: Rect2 = d_control[1]
+		draw_panel(dr, Color("#202934"), Color("#596675"), 1.5)
+		draw_ui_text(dr.position + Vector2(8, 35), str(d_control[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 	var base := Vector2(502, 646)
 	var cell := 64.0
-	var labels = [["↖", "↑", "↗"], ["←", "待", "→"], ["↙", "↓", "↘"]]
+	var labels = [["↖", "↑", "↗"], ["←", "隠", "→"], ["↙", "↓", "↘"]]
 	for y in range(3):
 		for x in range(3):
 			var r := Rect2(base.x + x * cell, base.y + y * cell, cell - 4, cell - 4)
@@ -2862,18 +3165,18 @@ func draw_mobile_controls_portrait() -> void:
 			draw_ui_text(r.position + Vector2(16, 41), labels[y][x], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
 	var styles = [["武", 20], ["影", 174], ["術", 328]]
 	for st in styles:
-		var r := Rect2(float(st[1]), 842, 140, 54)
+		var r := Rect2(float(st[1]), 900, 140, 54)
 		var active := style_name == str(st[0])
 		draw_panel(r, Color("#343527") if active else Color("#202934"), Color("#dbc66e") if active else Color("#4c5865"), 2.0 if active else 1.5)
 		draw_ui_text(r.position + Vector2(54, 37), str(st[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color.WHITE)
-	draw_ui_text(Vector2(20, 930), "方向・待機・忍術をタップして行動", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#7f8b98"))
+	draw_ui_text(Vector2(20, 980), "方向・隠・忍術をタップして行動", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#7f8b98"))
 
 
 func draw_modal_overlay_portrait() -> void:
 	draw_rect(Rect2(40,320,640,360),Color(0.05,0.07,0.09,0.97))
 	draw_rect(Rect2(40,320,640,360),Color("#e4cf7a"),false,3)
-	if checkout_prompt:
-		draw_ui_text(Vector2(85,420),"商品を精算しますか？",HORIZONTAL_ALIGNMENT_LEFT,-1,28,Color.WHITE)
+	if checkout_prompt or stairs_prompt:
+		draw_ui_text(Vector2(85,420), "商品を精算しますか？" if checkout_prompt else "次の階に降りますか？", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color.WHITE)
 		var yes := Rect2(100,555,220,70)
 		var no := Rect2(400,555,220,70)
 		for r in [yes,no]:
@@ -2989,38 +3292,44 @@ func draw_dungeon() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE
 	)
 
-	for y in range(MAP_H):
-		for x in range(MAP_W):
-			var p = Vector2(MAP_X + x * TILE, MAP_Y + y * TILE)
-			var seen = validate_grid(explored) and bool(explored[y][x])
-			var tile = str(map[y][x]) if validate_grid(map) else "#"
-			var col = Color("#232a33") if seen else Color("#0c1015")
-			if tile == "#":
-				col = Color("#151b22") if seen else Color("#090c10")
-			elif tile == ">":
-				col = Color("#4a4430") if seen else Color("#0c1015")
-			draw_rect(Rect2(p, Vector2(TILE - 1, TILE - 1)), col)
+	if map_visible:
+		for y in range(MAP_H):
+			for x in range(MAP_W):
+				var p = Vector2(MAP_X + x * TILE, MAP_Y + y * TILE)
+				var seen = validate_grid(explored) and bool(explored[y][x])
+				var tile = str(map[y][x]) if validate_grid(map) else "#"
+				var col = Color("#232a33") if seen else Color("#0c1015")
+				if tile == "#":
+					col = Color("#151b22") if seen else Color("#090c10")
+				elif tile == ">":
+					col = Color("#4a4430") if seen else Color("#0c1015")
+				draw_rect(Rect2(p, Vector2(TILE - 1, TILE - 1)), col)
+	for trap in placed_traps:
+		var tp: Vector2i = trap
+		if is_visible_cell(tp):
+			draw_entity_visual(cell_center(tp), "trap", "罠", 14, Color("#e0a35c"), TILE)
 
 	for item in items:
 		var ip: Vector2i = item["pos"]
 		if is_visible_cell(ip):
-			draw_item_token(cell_center(ip), TILE * 0.92, str(item.get("name", "薬")))
+			draw_entity_visual(cell_center(ip), "item", "物", 14, Color("#d6c56d"), TILE)
 
 	for e in enemies:
 		var ep: Vector2i = e["pos"]
 		if is_visible_cell(ep):
-			draw_enemy_token(cell_center(ep), TILE * 0.96, e)
+			var mark = "将" if bool(e["boss"]) else "敵"
+			draw_entity_visual(cell_center(ep), "boss" if bool(e["boss"]) else "enemy", mark, 14, Color("#e07a72"), TILE)
 
 	if shopkeeper.size() > 0:
 		var sp: Vector2i = shopkeeper["pos"]
 		if is_visible_cell(sp):
-			draw_merchant_token(cell_center(sp), TILE * 0.98, merchant_type == "闇商人")
+			var merchant_mark = "闇" if merchant_type == "闇商人" else "商"
+			draw_entity_visual(cell_center(sp), "dark_merchant" if merchant_type == "闇商人" else "merchant", merchant_mark, 14, Color("#c59cff") if merchant_type == "闇商人" else Color("#8ad5a2"), TILE)
 
 	if clone_active and is_visible_cell(clone_pos):
-		draw_circle(cell_center(clone_pos), TILE * 0.31, Color(0.33, 0.48, 0.72, 0.55))
-		draw_player_token(cell_center(clone_pos), TILE * 0.86)
+		draw_entity_visual(cell_center(clone_pos), "clone", "影", 16, Color("#91a9d6"), TILE)
 
-	draw_player_token(cell_center(player), TILE * 0.98)
+	draw_entity_visual(cell_center(player), "player", "忍", 16, Color("#d9e2ee"), TILE)
 
 	var hunger_note = "  【空腹注意】" if hunger <= 20 else ""
 	draw_ui_text(Vector2(16, HUD_Y + 30), "銭 %d(+%d)  忍魂 %d(+%d)  ターン %d%s" % [coins, run_coins, souls, run_souls, turn_no, hunger_note], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#ffb27d") if hunger <= 20 else Color("#c5cbd3"))
@@ -3036,8 +3345,14 @@ func draw_dungeon() -> void:
 	if DEVELOPMENT_UI_ENABLED and debug_mode:
 		draw_ui_text(Vector2(16, HUD_Y + 108), "DEBUG F2商店 F3ボス F9盗み準備 F12総合 / J分身", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffcf6b"))
 
+	var map_button_landscape := Rect2(930, 82, 100, 38)
+	draw_rect(map_button_landscape, Color("#252c35"))
+	draw_rect(map_button_landscape, Color("#e4cf7a") if map_visible else Color("#48515e"), false, 1)
+	draw_ui_text(map_button_landscape.position + Vector2(22, 25), "地図", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
 	draw_mobile_controls()
-	if checkout_prompt or ad_menu:
+	if inventory_menu:
+		draw_inventory_overlay(false)
+	elif checkout_prompt or stairs_prompt or ad_menu:
 		draw_modal_overlay()
 
 
@@ -3054,6 +3369,10 @@ func cell_center(p: Vector2i) -> Vector2:
 
 
 func touch_action_available(action: String) -> bool:
+	if action == "throw" or action == "trap":
+		return true
+	if action == "inventory":
+		return true
 	if action == "stairs":
 		return player == stairs_pos and (not boss_spawned or boss_defeated)
 	if action == "ultimate":
@@ -3067,14 +3386,25 @@ func touch_action_available(action: String) -> bool:
 	if action == "clone":
 		return ninja_energy >= 30 and not clone_active
 	if action == "ad":
-		return ADS_ENABLED and ad_boost_uses < 3
+		return ad_boost_uses < 3
 	return true
 
 
 func draw_mobile_controls() -> void:
+	var diamond_controls_landscape = [
+		["道具", Rect2(714, 566, 48, 48)],
+		["罠", Rect2(660, 618, 48, 48)],
+		["飛", Rect2(768, 618, 48, 48)],
+		["中断", Rect2(714, 670, 48, 42)]
+	]
+	for d_control in diamond_controls_landscape:
+		var dr = d_control[1]
+		draw_rect(dr, Color("#252c35"))
+		draw_rect(dr, Color("#596675"), false, 1)
+		draw_ui_text(dr.position + Vector2(7, 31), str(d_control[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE)
 	var base = Vector2(PAD_X, PAD_Y)
 	var cell = float(PAD_CELL)
-	var labels = [["↖", "↑", "↗"], ["←", "待", "→"], ["↙", "↓", "↘"]]
+	var labels = [["↖", "↑", "↗"], ["←", "隠", "→"], ["↙", "↓", "↘"]]
 	for y in range(3):
 		for x in range(3):
 			var r = Rect2(base.x + x * cell, base.y + y * cell, cell - 3, cell - 3)
@@ -3083,17 +3413,17 @@ func draw_mobile_controls() -> void:
 			draw_ui_text(r.position + Vector2(13, 29), labels[y][x], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
 
 	var actions = [
-		["拾", "pickup", 20, 78], ["階段", "stairs", 104, 78], ["奥義", "ultimate", 188, 78], ["精算", "buy", 272, 78],
-		["隠身", "hide", 356, 78], ["縛影", "bind", 440, 86], ["煙", "smoke", 532, 68], ["分身", "clone", 606, 78]
+		["階段", "stairs", 20, 70], ["奥義", "ultimate", 94, 70], ["精算", "buy", 168, 70],
+		["隠身", "hide", 242, 70], ["縛影", "bind", 316, 70], ["煙", "smoke", 390, 70],
+		["分身", "clone", 464, 70], ["広告", "ad", 538, 70]
 	]
-	if ADS_ENABLED:
-		actions.append(["広告", "ad", 690, 72])
 	for a in actions:
 		var r = Rect2(float(a[2]), 662, float(a[3]), 42)
 		var available = touch_action_available(str(a[1]))
 		draw_rect(r, Color("#252c35") if available else Color("#171c22"))
 		draw_rect(r, Color("#48515e") if available else Color("#303740"), false, 1)
-		draw_ui_text(r.position + Vector2(12, 27), str(a[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE if available else Color("#707984"))
+		draw_ui_text(r.position + Vector2(8, 27), str(a[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color.WHITE if available else Color("#707984"))
+
 
 	# Debug builds expose a direct regression button so editor function-key shortcuts cannot swallow F12.
 	if DEVELOPMENT_UI_ENABLED and OS.is_debug_build():
@@ -3113,8 +3443,8 @@ func draw_mobile_controls() -> void:
 func draw_modal_overlay() -> void:
 	draw_rect(Rect2(220, 220, 660, 260), Color(0.05, 0.07, 0.09, 0.96))
 	draw_rect(Rect2(220, 220, 660, 260), Color("#e4cf7a"), false, 2)
-	if checkout_prompt:
-		draw_ui_text(Vector2(285, 300), "商品を精算しますか？", HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color.WHITE)
+	if checkout_prompt or stairs_prompt:
+		draw_ui_text(Vector2(285, 300), "商品を精算しますか？" if checkout_prompt else "次の階に降りますか？", HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color.WHITE)
 		var yes_r = Rect2(350, 390, 160, 54)
 		var no_r = Rect2(590, 390, 160, 54)
 		for r in [yes_r, no_r]:
@@ -3131,3 +3461,9 @@ func draw_modal_overlay() -> void:
 			draw_rect(r, Color("#252c35"))
 			draw_rect(r, Color("#596575"), false, 1)
 			draw_ui_text(r.position + Vector2(22, 35), labels[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
+
+
+func toggle_map_visibility() -> void:
+	map_visible = not map_visible
+	message = "地図ON" if map_visible else "地図OFF"
+	queue_redraw()

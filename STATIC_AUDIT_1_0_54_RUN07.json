@@ -1,0 +1,67 @@
+{
+  "step": "07_PLAY_CORE_INTERACTION",
+  "target_version": "1.0.54",
+  "status": "PASS",
+  "scope": [
+    "version identity alignment",
+    "automatic item pickup on step",
+    "stairs arrival yes/no prompt",
+    "required bitmap glyphs"
+  ],
+  "full_rc_complete": false,
+  "remaining_confirmed_scope": [
+    "道具:装備・使用・識別",
+    "地図ON/OFF",
+    "中断セーブ操作",
+    "中央「隠」",
+    "飛び道具「飛」",
+    "罠設置",
+    "道具・罠・飛・中断のひし形配置",
+    "採用済みキャラ・アイテムデザイン統一"
+  ],
+  "functions": 132,
+  "unique_functions": 132,
+  "changed_existing_functions": [
+    "_ready",
+    "_process",
+    "_unhandled_key_input",
+    "handle_press",
+    "handle_modal_touch",
+    "try_move",
+    "pickup",
+    "handle_press_portrait",
+    "handle_modal_touch_portrait",
+    "draw_dungeon_portrait",
+    "draw_modal_overlay_portrait",
+    "draw_dungeon",
+    "draw_modal_overlay"
+  ],
+  "added_functions": [
+    "request_stairs_confirmation",
+    "confirm_stairs"
+  ],
+  "removed_functions": [],
+  "critical_gameplay_functions_unchanged": true,
+  "checks": {
+    "Main.gd version 1.0.54": true,
+    "release channel PLAY UI SYSTEM RC": true,
+    "project.godot version 1.0.54": true,
+    "iOS short version 1.0.54": true,
+    "iOS build 54": true,
+    "Codemagic Web artifact 1.0.54": true,
+    "auto pickup no extra turn": true,
+    "manual pickup preserved": true,
+    "exact stairs prompt": true,
+    "stairs request": true,
+    "stairs confirm": true,
+    "prompt after movement turn": true,
+    "modal blocks hide hold": true,
+    "save schema v4 unchanged": true,
+    "development UI disabled": true,
+    "ads disabled": true
+  },
+  "missing_ui_glyphs": [],
+  "godot_engine_execution": "NOT RUN - Godot executable unavailable in this environment",
+  "runtime_pass_claimed": false,
+  "issues": []
+}

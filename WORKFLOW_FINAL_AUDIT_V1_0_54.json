@@ -1,0 +1,49 @@
+{
+  "project": "忍道 - SHINOBI ROGUE",
+  "version": "1.0.54",
+  "run": "RUN17",
+  "audit_type": "codemagic_web_ios_workflow_final_audit",
+  "timestamp_utc": "2026-09-11T03:53:18.205108+00:00",
+  "godot_runtime_available": false,
+  "runtime_pass_claimed": false,
+  "checks": {
+    "yaml_parse": true,
+    "web_workflow_exists": true,
+    "web_installs_godot": true,
+    "web_imports_resources": true,
+    "web_runs_regression": true,
+    "web_exports_release": true,
+    "web_checks_wasm": true,
+    "web_checks_pck": true,
+    "web_packages_zip": true,
+    "web_preset_exists": true,
+    "pwa_enabled": true,
+    "ios_preflight_exists": true,
+    "ios_preflight_regression": true,
+    "ios_appstore_exists": true,
+    "ios_signing_app_store": true,
+    "ios_bundle_env_reference": true,
+    "ios_appstore_integration": true,
+    "ios_export_release": true,
+    "ios_fetch_signing": true,
+    "ios_apply_profiles": true,
+    "ios_build_ipa": true,
+    "ios_submit_testflight": true,
+    "ios_not_submit_store": true,
+    "ios_template_has_placeholder_bundle": true,
+    "ios_template_has_team_placeholder": true,
+    "release_version": true
+  },
+  "static_pass": true,
+  "recommended_execution_order": [
+    "shinobi-web-release",
+    "shinobi-ios-preflight",
+    "shinobi-ios-appstore"
+  ],
+  "external_requirements_for_appstore": [
+    "Apple Developer Program membership",
+    "final Bundle ID",
+    "Apple Team ID",
+    "Codemagic App Store Connect integration/signing"
+  ]
+}

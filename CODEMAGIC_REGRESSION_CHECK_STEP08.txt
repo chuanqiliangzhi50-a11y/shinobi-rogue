@@ -1,0 +1,12 @@
+27:      - name: Godot regression
+30:          LOG=/tmp/shinobi_regression.log
+31:          "$GODOT_BIN" --headless --path . -- --shinobi-regression 2>&1 | tee "$LOG"
+34:            echo "Unexpected Godot ERROR lines detected during regression." >&2
+83:      - name: Godot regression
+86:          LOG=/tmp/shinobi_regression.log
+87:          "$GODOT_BIN" --headless --path . -- --shinobi-regression 2>&1 | tee "$LOG"
+90:            echo "Unexpected Godot ERROR lines detected during regression." >&2
+137:      - name: Godot regression
+140:          LOG=/tmp/shinobi_regression.log
+141:          "$GODOT_BIN" --headless --path . -- --shinobi-regression 2>&1 | tee "$LOG"
+144:            echo "Unexpected Godot ERROR lines detected during regression." >&2

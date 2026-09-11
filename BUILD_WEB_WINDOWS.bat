@@ -16,7 +16,7 @@ echo [1/3] Importing project resources...
 %GODOT% --headless --editor --path . --quit-after 2 || exit /b 1
 
 echo [2/3] Running regression...
-%GODOT% --headless --path . -- --self-test > web_regression.log 2>&1
+%GODOT% --headless --path . -- --shinobi-regression > web_regression.log 2>&1
 findstr /C:"SHINOBI_REGRESSION PASS ALL:" web_regression.log >nul || (
   type web_regression.log
   echo [ERROR] Regression PASS marker not found.

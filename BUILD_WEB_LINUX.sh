@@ -11,9 +11,8 @@ echo "[1/3] Importing project resources..."
 "$GODOT_BIN" --headless --editor --path . --quit-after 2
 
 echo "[2/3] Running regression..."
-"$GODOT_BIN" --headless --path . -- --self-test 2>&1 | tee web_regression.log
+"$GODOT_BIN" --headless --path . -- --shinobi-regression 2>&1 | tee web_regression.log
 grep -Fq 'SHINOBI_REGRESSION PASS ALL:' web_regression.log
-a=! grep -Fq 'ERROR:' web_regression.log
 if grep -Fq 'ERROR:' web_regression.log; then
   echo '[ERROR] Godot reported an ERROR line.' >&2
   exit 1

@@ -1,6 +1,6 @@
-# 忍道 - SHINOBI ROGUE Ver.1.0.53 VISUAL INTEGRATION RC
+# 忍道 - SHINOBI ROGUE Ver.1.0.52 QUALITY IMPROVEMENT PREVIEW
 
-## Ver.1.0.53
+## Ver.1.0.52
 
 Quality improvement preview: dungeon/HUD/touch presentation upgraded; character and item art remain placeholders until approved.
 

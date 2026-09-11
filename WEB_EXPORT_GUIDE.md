@@ -1,4 +1,4 @@
-# WEB EXPORT GUIDE — Ver.1.0.42 RELEASE RC2
+# WEB EXPORT GUIDE — Ver.1.0.54 PLAY UI SYSTEM RC
 
 WebはiPhone実機UI確認用です。App Store提出物そのものではありません。
 

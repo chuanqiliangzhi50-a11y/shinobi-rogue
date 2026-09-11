@@ -1,0 +1,1049 @@
+diff -ruN /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/Main.gd /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/Main.gd
+--- /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/Main.gd	2026-09-10 21:10:30.000000000 +0000
++++ /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/Main.gd	2026-09-10 22:12:11.289663568 +0000
+@@ -12,7 +12,7 @@
+ const HUD_Y := 468
+ const META_PATH := "user://shinobi_meta.json"
+ const RUN_PATH := "user://shinobi_run.save"
+-const RUN_SAVE_VERSION := 4
++const RUN_SAVE_VERSION := 5
+ const PAD_X := 820
+ const PAD_Y := 562
+ const PAD_CELL := 50
+@@ -30,6 +30,9 @@
+ var stairs_pos := Vector2i(0, 0)
+ var enemies: Array = []
+ var items: Array = []
++var inventory_items: Array = []
++var inventory_menu := false
++var inventory_selected := 0
+ 
+ var floor_no := 1
+ var turn_no := 0
+@@ -515,7 +518,19 @@
+ 	"本": Vector2i(7, 12),
+ 	"語": Vector2i(8, 12),
+ 	"次": Vector2i(9, 12),
+-	"降": Vector2i(10, 12)
++	"降": Vector2i(10, 12),
++	"具": Vector2i(0, 13),
++	"用": Vector2i(1, 13),
++	"識": Vector2i(2, 13),
++	"別": Vector2i(3, 13),
++	"持": Vector2i(4, 13),
++	"確": Vector2i(5, 13),
++	"画": Vector2i(6, 13),
++	"済": Vector2i(7, 13),
++	"袋": Vector2i(8, 13),
++	"得": Vector2i(9, 13),
++	"認": Vector2i(10, 13),
++	"閉": Vector2i(11, 13)
+ }
+ 
+ 
+@@ -561,7 +576,7 @@
+ 
+ 
+ func _process(delta: float) -> void:
+-	if hide_hold_active and not in_village and not checkout_prompt and not stairs_prompt and not ad_menu:
++	if hide_hold_active and not in_village and not checkout_prompt and not stairs_prompt and not ad_menu and not inventory_menu:
+ 		hide_hold_elapsed += delta
+ 		if hide_hold_elapsed >= HIDE_HOLD_INTERVAL:
+ 			hide_hold_elapsed = 0.0
+@@ -584,6 +599,10 @@
+ 		handle_village_input(event)
+ 		return
+ 
++	if inventory_menu:
++		handle_inventory_key(event)
++		return
++
+ 	if checkout_prompt:
+ 		if event.keycode == KEY_Y:
+ 			confirm_checkout(true)
+@@ -620,6 +639,8 @@
+ 	elif event.keycode == KEY_3:
+ 		style_name = "術"
+ 		message = "忍道：術"
++	elif event.keycode == KEY_I:
++		open_inventory()
+ 	elif event.keycode == KEY_G:
+ 		pickup()
+ 	elif event.keycode == KEY_B:
+@@ -702,6 +723,9 @@
+ 	if in_village:
+ 		handle_village_touch(pos)
+ 		return
++	if inventory_menu:
++		handle_inventory_touch(pos, false)
++		return
+ 	if checkout_prompt or stairs_prompt or ad_menu:
+ 		handle_modal_touch(pos)
+ 		return
+@@ -842,7 +866,7 @@
+ 		return
+ 
+ 	var buttons = [
+-		{"rect": Rect2(20, 662, 78, 42), "action": "pickup"},
++		{"rect": Rect2(20, 662, 78, 42), "action": "inventory"},
+ 		{"rect": Rect2(104, 662, 78, 42), "action": "stairs"},
+ 		{"rect": Rect2(188, 662, 78, 42), "action": "ultimate"},
+ 		{"rect": Rect2(272, 662, 78, 42), "action": "buy"},
+@@ -860,7 +884,9 @@
+ 		var rect: Rect2 = b["rect"]
+ 		if rect.has_point(pos):
+ 			var action = str(b["action"])
+-			if action == "pickup":
++			if action == "inventory":
++				open_inventory()
++			elif action == "pickup":
+ 				pickup()
+ 			elif action == "stairs":
+ 				use_stairs()
+@@ -987,6 +1013,9 @@
+ 	explored.clear()
+ 	enemies.clear()
+ 	items.clear()
++	inventory_items.clear()
++	inventory_menu = false
++	inventory_selected = 0
+ 	unpaid_items.clear()
+ 	shop_items.clear()
+ 	shop_active = false
+@@ -1431,11 +1460,173 @@
+ 		unpaid_items.append(item)
+ 		message = "%sを手に取った。未精算。" % str(item["name"])
+ 	else:
+-		apply_item_effect(str(item["name"]))
++		add_inventory_item(str(item["name"]), false)
++		message = "%sを拾った。" % str(item["name"])
+ 	if consume_turn:
+ 		end_turn()
+ 
+ 
++func valid_inventory_item_name(name: String) -> bool:
++	return name in ["薬", "兵糧丸", "忍気丸", "上薬", "大兵糧丸", "小巻物", "中巻物", "大巻物", "究極巻物"]
++
++
++func add_inventory_item(name: String, identified: bool = false) -> void:
++	if not valid_inventory_item_name(name):
++		return
++	inventory_items.append({"name": name, "identified": identified})
++
++
++func sanitize_inventory_array(value: Variant) -> Array:
++	var out: Array = []
++	if typeof(value) != TYPE_ARRAY:
++		return out
++	for raw in value:
++		if typeof(raw) != TYPE_DICTIONARY:
++			continue
++		var name := str(raw.get("name", ""))
++		if valid_inventory_item_name(name):
++			out.append({"name": name, "identified": bool(raw.get("identified", false))})
++	return out
++
++
++func inventory_entry_count() -> int:
++	return 2 + inventory_items.size()
++
++
++func inventory_selected_name() -> String:
++	if inventory_selected == 0:
++		return WEAPON_NAME
++	if inventory_selected == 1:
++		return ARMOR_NAME
++	var idx := inventory_selected - 2
++	if idx >= 0 and idx < inventory_items.size():
++		return str(inventory_items[idx].get("name", ""))
++	return ""
++
++
++func open_inventory() -> void:
++	if in_village or checkout_prompt or stairs_prompt or ad_menu:
++		return
++	inventory_menu = true
++	inventory_selected = clamp(inventory_selected, 0, max(0, inventory_entry_count() - 1))
++	message = "道具を確認する。"
++	queue_redraw()
++
++
++func close_inventory() -> void:
++	inventory_menu = false
++	message = "道具画面を閉じた。"
++	queue_redraw()
++
++
++func inventory_equip_selected() -> void:
++	if inventory_selected == 0 or inventory_selected == 1:
++		message = "%sは装備中。" % inventory_selected_name()
++	else:
++		message = "この道具は装備できない。"
++	queue_redraw()
++
++
++func inventory_use_selected(consume_turn: bool = true) -> void:
++	var idx := inventory_selected - 2
++	if idx < 0 or idx >= inventory_items.size():
++		message = "装備品は使用できない。"
++		queue_redraw()
++		return
++	var name := str(inventory_items[idx].get("name", ""))
++	inventory_items.remove_at(idx)
++	apply_item_effect(name)
++	inventory_selected = clamp(inventory_selected, 0, max(0, inventory_entry_count() - 1))
++	inventory_menu = false
++	if consume_turn:
++		end_turn()
++	queue_redraw()
++
++
++func inventory_identify_selected() -> void:
++	var idx := inventory_selected - 2
++	if idx < 0 or idx >= inventory_items.size():
++		message = "%sは識別済み。" % inventory_selected_name()
++		queue_redraw()
++		return
++	inventory_items[idx]["identified"] = true
++	message = "%sを識別した。" % str(inventory_items[idx].get("name", ""))
++	queue_redraw()
++
++
++func handle_inventory_key(event: InputEvent) -> void:
++	if event.keycode == KEY_ESCAPE or event.keycode == KEY_I:
++		close_inventory()
++	elif event.keycode == KEY_UP:
++		inventory_selected = max(0, inventory_selected - 1)
++	elif event.keycode == KEY_DOWN:
++		inventory_selected = min(max(0, inventory_entry_count() - 1), inventory_selected + 1)
++	elif event.keycode == KEY_E:
++		inventory_equip_selected()
++	elif event.keycode == KEY_U or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
++		inventory_use_selected()
++	elif event.keycode == KEY_D:
++		inventory_identify_selected()
++	queue_redraw()
++
++
++func handle_inventory_touch(pos: Vector2, portrait: bool) -> void:
++	var panel_x := 60.0 if portrait else 270.0
++	var panel_y := 225.0 if portrait else 120.0
++	var row_h := 46.0
++	var max_rows := 7
++	for i in range(min(inventory_entry_count(), max_rows)):
++		var r := Rect2(panel_x + 20.0, panel_y + 74.0 + i * row_h, 500.0, 40.0)
++		if r.has_point(pos):
++			inventory_selected = i
++			queue_redraw()
++			return
++	var action_y := panel_y + 420.0
++	var actions = [["equip", panel_x + 20.0], ["use", panel_x + 150.0], ["identify", panel_x + 280.0], ["back", panel_x + 410.0]]
++	for action in actions:
++		if Rect2(float(action[1]), action_y, 115.0, 52.0).has_point(pos):
++			match str(action[0]):
++				"equip": inventory_equip_selected()
++				"use": inventory_use_selected()
++				"identify": inventory_identify_selected()
++				"back": close_inventory()
++			return
++
++
++func inventory_display_name(index: int) -> String:
++	if index == 0:
++		return "%s（装備中）" % WEAPON_NAME
++	if index == 1:
++		return "%s（装備中）" % ARMOR_NAME
++	var idx := index - 2
++	if idx < 0 or idx >= inventory_items.size():
++		return ""
++	var entry: Dictionary = inventory_items[idx]
++	return str(entry.get("name", "")) if bool(entry.get("identified", false)) else "未識別の道具"
++
++
++func draw_inventory_overlay(portrait: bool) -> void:
++	var panel_x := 60.0 if portrait else 270.0
++	var panel_y := 225.0 if portrait else 120.0
++	var panel_w := 560.0
++	draw_rect(Rect2(panel_x, panel_y, panel_w, 500.0), Color(0.05, 0.07, 0.09, 0.98))
++	draw_rect(Rect2(panel_x, panel_y, panel_w, 500.0), Color("#e4cf7a"), false, 2.0)
++	draw_ui_text(Vector2(panel_x + 22.0, panel_y + 48.0), "道具 %d点" % inventory_items.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color.WHITE)
++	var row_h := 46.0
++	var max_rows := 7
++	for i in range(min(inventory_entry_count(), max_rows)):
++		var r := Rect2(panel_x + 20.0, panel_y + 74.0 + i * row_h, 500.0, 40.0)
++		draw_rect(r, Color("#343527") if i == inventory_selected else Color("#202934"))
++		draw_rect(r, Color("#dbc66e") if i == inventory_selected else Color("#4c5865"), false, 1.5)
++		draw_ui_text(r.position + Vector2(12, 27), inventory_display_name(i), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
++	var action_y := panel_y + 420.0
++	var labels = [["装備", panel_x + 20.0], ["使用", panel_x + 150.0], ["識別", panel_x + 280.0], ["戻る", panel_x + 410.0]]
++	for action in labels:
++		var r := Rect2(float(action[1]), action_y, 115.0, 52.0)
++		draw_rect(r, Color("#252c35"))
++		draw_rect(r, Color("#596575"), false, 1.5)
++		draw_ui_text(r.position + Vector2(22, 34), str(action[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
++
+ func item_shop_price(name: String) -> int:
+ 	if name == "薬":
+ 		return 8
+@@ -1522,9 +1713,9 @@
+ 	run_coins -= from_run
+ 	coins -= total - from_run
+ 	for item in unpaid_items:
+-		apply_item_effect(str(item["name"]))
++		add_inventory_item(str(item["name"]), false)
+ 	unpaid_items.clear()
+-	message = "精算した。"
++	message = "精算した。道具袋に入れた。"
+ 	save_run_state()
+ 	queue_redraw()
+ 
+@@ -1540,7 +1731,7 @@
+ 	var stolen_count = unpaid_items.size()
+ 	for item in unpaid_items:
+ 		if typeof(item) == TYPE_DICTIONARY:
+-			apply_item_effect(str(item.get("name", "")))
++			add_inventory_item(str(item.get("name", "")), false)
+ 	unpaid_items.clear()
+ 	message = "%d点を盗んだ！ 商人が追ってくる。" % stolen_count
+ 	save_run_state()
+@@ -1966,6 +2157,7 @@
+ 		"explored": explored,
+ 		"enemies": enemies,
+ 		"items": items,
++		"inventory_items": inventory_items,
+ 		"shop_active": shop_active,
+ 		"shop_hostile": shop_hostile,
+ 		"merchant_type": merchant_type,
+@@ -2043,6 +2235,9 @@
+ 	defense_power = max(0, int(data.get("defense_power", 1 + perm_defense)))
+ 	enemies = sanitize_enemy_array(data.get("enemies", []))
+ 	items = sanitize_item_array(data.get("items", []))
++	inventory_items = sanitize_inventory_array(data.get("inventory_items", [])) if version >= 5 else []
++	inventory_menu = false
++	inventory_selected = 0
+ 	shop_active = bool(data.get("shop_active", false))
+ 	shop_hostile = bool(data.get("shop_hostile", false))
+ 	merchant_type = str(data.get("merchant_type", "旅商人"))
+@@ -2134,7 +2329,7 @@
+ 		"attack_power": attack_power, "defense_power": defense_power,
+ 		"in_village": in_village, "village_menu": village_menu,
+ 		"map": map.duplicate(true), "explored": explored.duplicate(true),
+-		"enemies": enemies.duplicate(true), "items": items.duplicate(true),
++		"enemies": enemies.duplicate(true), "items": items.duplicate(true), "inventory_items": inventory_items.duplicate(true),
+ 		"shop_active": shop_active, "shop_hostile": shop_hostile, "merchant_type": merchant_type, "shop_rect": shop_rect,
+ 		"shopkeeper": shopkeeper.duplicate(true), "shopkeeper_home": shopkeeper_home,
+ 		"shop_items": shop_items.duplicate(true), "unpaid_items": unpaid_items.duplicate(true),
+@@ -2173,6 +2368,9 @@
+ 	explored = state["explored"].duplicate(true)
+ 	enemies = state["enemies"].duplicate(true)
+ 	items = state["items"].duplicate(true)
++	inventory_items = state.get("inventory_items", []).duplicate(true)
++	inventory_menu = false
++	inventory_selected = 0
+ 	shop_active = bool(state["shop_active"])
+ 	shop_hostile = bool(state["shop_hostile"])
+ 	merchant_type = str(state["merchant_type"])
+@@ -2208,7 +2406,7 @@
+ func debug_test_save_contract() -> String:
+ 	generate_floor()
+ 	var data = build_run_state()
+-	var required = ["player", "stairs_pos", "map", "explored", "enemies", "items", "unpaid_items", "merchant_bound_turns", "clone_active", "clone_pos", "clone_steps_left", "merchant_type", "last_ad_checkpoint_floor"]
++	var required = ["player", "stairs_pos", "map", "explored", "enemies", "items", "inventory_items", "unpaid_items", "merchant_bound_turns", "clone_active", "clone_pos", "clone_steps_left", "merchant_type", "last_ad_checkpoint_floor"]
+ 	for key in required:
+ 		if not data.has(key):
+ 			return "FAIL 保存契約:%s" % key
+@@ -2277,12 +2475,11 @@
+ func debug_test_shop_theft() -> String:
+ 	generate_floor()
+ 	generate_shop()
+-	hp = max(1, max_hp - 10)
+-	var before_hp = hp
++	inventory_items = []
+ 	unpaid_items = [{"name": "薬", "price": 8, "shop": true}]
+ 	shop_hostile = false
+ 	try_theft_escape()
+-	var ok = shop_hostile and unpaid_items.is_empty() and hp > before_hp
++	var ok = shop_hostile and unpaid_items.is_empty() and inventory_items.size() == 1 and str(inventory_items[0].get("name", "")) == "薬"
+ 	return "PASS 盗み" if ok else "FAIL 盗み"
+ 
+ 
+@@ -2355,6 +2552,25 @@
+ 	return "PASS アイテム一覧"
+ 
+ 
++func debug_test_inventory_contract() -> String:
++	inventory_items = []
++	add_inventory_item("薬", false)
++	if inventory_items.size() != 1 or bool(inventory_items[0].get("identified", true)):
++		return "FAIL 道具取得"
++	inventory_selected = 2
++	inventory_identify_selected()
++	if not bool(inventory_items[0].get("identified", false)):
++		return "FAIL 道具識別"
++	hp = max(1, max_hp - 10)
++	var before_hp := hp
++	inventory_use_selected(false)
++	if not inventory_items.is_empty() or hp <= before_hp:
++		return "FAIL 道具使用"
++	inventory_selected = 0
++	inventory_equip_selected()
++	return "PASS 道具装備使用識別" if message.find("装備中") >= 0 else "FAIL 道具装備"
++
++
+ func debug_test_spawn_safety() -> String:
+ 	generate_floor()
+ 	var occupied_enemy: Dictionary = {}
+@@ -2454,7 +2670,7 @@
+ 
+ 
+ func debug_test_ui_glyph_contract() -> String:
+-	var required := "忍道里魂銭恒久攻撃防御初期気鍛冶屋術研究所録帳成長出陣階段奥義精算隠身縛影煙分待方向操作機能ップ"
++	var required := "忍道里魂銭恒久攻撃防御初期気鍛冶屋術研究所録帳成長出陣階段奥義精算隠身縛影煙分待方向操作機能ップ具装備使用識別戻持物未点"
+ 	for i in range(required.length()):
+ 		var ch := required.substr(i, 1)
+ 		if not UI_GLYPH_MAP.has(ch):
+@@ -2478,6 +2694,7 @@
+ 		debug_test_enemy_curve(),
+ 		debug_test_ranged_line(),
+ 		debug_test_item_catalog(),
++		debug_test_inventory_contract(),
+ 		debug_test_boss_gate(),
+ 		debug_test_spawn_safety(),
+ 		debug_test_boss_resume_repair(),
+@@ -2518,6 +2735,9 @@
+ 	if in_village:
+ 		handle_village_touch_portrait(pos)
+ 		return
++	if inventory_menu:
++		handle_inventory_touch(pos, true)
++		return
+ 	if checkout_prompt or stairs_prompt or ad_menu:
+ 		handle_modal_touch_portrait(pos)
+ 		return
+@@ -2547,7 +2767,8 @@
+ 		var r: Rect2 = a[0]
+ 		if r.has_point(pos):
+ 			var action := str(a[1])
+-			if action == "pickup": pickup()
++			if action == "inventory": open_inventory()
++			elif action == "pickup": pickup()
+ 			elif action == "stairs": use_stairs()
+ 			elif action == "ultimate": use_ultimate()
+ 			elif action == "buy": buy_unpaid()
+@@ -2763,12 +2984,14 @@
+ 	if unpaid_items.size() > 0:
+ 		draw_ui_text(Vector2(420, 603), "未精算 %d点/%d銭" % [unpaid_items.size(), shop_total_unpaid()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ff9a7a"))
+ 	draw_mobile_controls_portrait()
+-	if checkout_prompt or stairs_prompt or ad_menu:
++	if inventory_menu:
++		draw_inventory_overlay(true)
++	elif checkout_prompt or stairs_prompt or ad_menu:
+ 		draw_modal_overlay_portrait()
+ 
+ 
+ func draw_mobile_controls_portrait() -> void:
+-	var actions = [["拾", "pickup"], ["階段", "stairs"], ["奥義", "ultimate"], ["精算", "buy"], ["隠身", "hide"], ["縛影", "bind"], ["煙", "smoke"], ["分身", "clone"], ["広告", "ad"]]
++	var actions = [["道具", "inventory"], ["階段", "stairs"], ["奥義", "ultimate"], ["精算", "buy"], ["隠身", "hide"], ["縛影", "bind"], ["煙", "smoke"], ["分身", "clone"], ["広告", "ad"]]
+ 	for i in range(actions.size()):
+ 		var col := i % 3
+ 		var row := i / 3
+@@ -2963,7 +3186,9 @@
+ 		draw_ui_text(Vector2(16, HUD_Y + 108), "DEBUG F2商店 F3ボス F9盗み準備 F12総合 / J分身", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffcf6b"))
+ 
+ 	draw_mobile_controls()
+-	if checkout_prompt or stairs_prompt or ad_menu:
++	if inventory_menu:
++		draw_inventory_overlay(false)
++	elif checkout_prompt or stairs_prompt or ad_menu:
+ 		draw_modal_overlay()
+ 
+ 
+@@ -2980,6 +3205,8 @@
+ 
+ 
+ func touch_action_available(action: String) -> bool:
++	if action == "inventory":
++		return true
+ 	if action == "stairs":
+ 		return player == stairs_pos and (not boss_spawned or boss_defeated)
+ 	if action == "ultimate":
+@@ -3009,7 +3236,7 @@
+ 			draw_ui_text(r.position + Vector2(13, 29), labels[y][x], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
+ 
+ 	var actions = [
+-		["拾", "pickup", 20, 78], ["階段", "stairs", 104, 78], ["奥義", "ultimate", 188, 78], ["精算", "buy", 272, 78],
++		["道具", "inventory", 20, 78], ["階段", "stairs", 104, 78], ["奥義", "ultimate", 188, 78], ["精算", "buy", 272, 78],
+ 		["隠身", "hide", 356, 78], ["縛影", "bind", 440, 86], ["煙", "smoke", 532, 68], ["分身", "clone", 606, 78], ["広告", "ad", 690, 72]
+ 	]
+ 	for a in actions:
+diff -ruN /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/STATIC_AUDIT_1_0_54_RUN08.json /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/STATIC_AUDIT_1_0_54_RUN08.json
+--- /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/STATIC_AUDIT_1_0_54_RUN08.json	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/STATIC_AUDIT_1_0_54_RUN08.json	2026-09-10 22:12:12.298930463 +0000
+@@ -0,0 +1,11 @@
++{
++  "version": "1.0.54",
++  "status": "PASS",
++  "functions": 147,
++  "unique_functions": 147,
++  "save_schema": 5,
++  "monte_carlo_floor_generations": 50000,
++  "monte_carlo_min_safe_path_cells": 37,
++  "issues": [],
++  "godot_engine_execution": "NOT RUN by this Python checker"
++}
+diff -ruN /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/STEP08_CHANGESET.diff /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/STEP08_CHANGESET.diff
+--- /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/STEP08_CHANGESET.diff	1970-01-01 00:00:00.000000000 +0000
++++ /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/STEP08_CHANGESET.diff	2026-09-10 22:12:21.182859554 +0000
+@@ -0,0 +1,493 @@
++diff -ruN /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/Main.gd /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/Main.gd
++--- /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/Main.gd	2026-09-10 21:10:30.000000000 +0000
+++++ /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/Main.gd	2026-09-10 22:12:11.289663568 +0000
++@@ -12,7 +12,7 @@
++ const HUD_Y := 468
++ const META_PATH := "user://shinobi_meta.json"
++ const RUN_PATH := "user://shinobi_run.save"
++-const RUN_SAVE_VERSION := 4
+++const RUN_SAVE_VERSION := 5
++ const PAD_X := 820
++ const PAD_Y := 562
++ const PAD_CELL := 50
++@@ -30,6 +30,9 @@
++ var stairs_pos := Vector2i(0, 0)
++ var enemies: Array = []
++ var items: Array = []
+++var inventory_items: Array = []
+++var inventory_menu := false
+++var inventory_selected := 0
++ 
++ var floor_no := 1
++ var turn_no := 0
++@@ -515,7 +518,19 @@
++ 	"本": Vector2i(7, 12),
++ 	"語": Vector2i(8, 12),
++ 	"次": Vector2i(9, 12),
++-	"降": Vector2i(10, 12)
+++	"降": Vector2i(10, 12),
+++	"具": Vector2i(0, 13),
+++	"用": Vector2i(1, 13),
+++	"識": Vector2i(2, 13),
+++	"別": Vector2i(3, 13),
+++	"持": Vector2i(4, 13),
+++	"確": Vector2i(5, 13),
+++	"画": Vector2i(6, 13),
+++	"済": Vector2i(7, 13),
+++	"袋": Vector2i(8, 13),
+++	"得": Vector2i(9, 13),
+++	"認": Vector2i(10, 13),
+++	"閉": Vector2i(11, 13)
++ }
++ 
++ 
++@@ -561,7 +576,7 @@
++ 
++ 
++ func _process(delta: float) -> void:
++-	if hide_hold_active and not in_village and not checkout_prompt and not stairs_prompt and not ad_menu:
+++	if hide_hold_active and not in_village and not checkout_prompt and not stairs_prompt and not ad_menu and not inventory_menu:
++ 		hide_hold_elapsed += delta
++ 		if hide_hold_elapsed >= HIDE_HOLD_INTERVAL:
++ 			hide_hold_elapsed = 0.0
++@@ -584,6 +599,10 @@
++ 		handle_village_input(event)
++ 		return
++ 
+++	if inventory_menu:
+++		handle_inventory_key(event)
+++		return
+++
++ 	if checkout_prompt:
++ 		if event.keycode == KEY_Y:
++ 			confirm_checkout(true)
++@@ -620,6 +639,8 @@
++ 	elif event.keycode == KEY_3:
++ 		style_name = "術"
++ 		message = "忍道：術"
+++	elif event.keycode == KEY_I:
+++		open_inventory()
++ 	elif event.keycode == KEY_G:
++ 		pickup()
++ 	elif event.keycode == KEY_B:
++@@ -702,6 +723,9 @@
++ 	if in_village:
++ 		handle_village_touch(pos)
++ 		return
+++	if inventory_menu:
+++		handle_inventory_touch(pos, false)
+++		return
++ 	if checkout_prompt or stairs_prompt or ad_menu:
++ 		handle_modal_touch(pos)
++ 		return
++@@ -842,7 +866,7 @@
++ 		return
++ 
++ 	var buttons = [
++-		{"rect": Rect2(20, 662, 78, 42), "action": "pickup"},
+++		{"rect": Rect2(20, 662, 78, 42), "action": "inventory"},
++ 		{"rect": Rect2(104, 662, 78, 42), "action": "stairs"},
++ 		{"rect": Rect2(188, 662, 78, 42), "action": "ultimate"},
++ 		{"rect": Rect2(272, 662, 78, 42), "action": "buy"},
++@@ -860,7 +884,9 @@
++ 		var rect: Rect2 = b["rect"]
++ 		if rect.has_point(pos):
++ 			var action = str(b["action"])
++-			if action == "pickup":
+++			if action == "inventory":
+++				open_inventory()
+++			elif action == "pickup":
++ 				pickup()
++ 			elif action == "stairs":
++ 				use_stairs()
++@@ -987,6 +1013,9 @@
++ 	explored.clear()
++ 	enemies.clear()
++ 	items.clear()
+++	inventory_items.clear()
+++	inventory_menu = false
+++	inventory_selected = 0
++ 	unpaid_items.clear()
++ 	shop_items.clear()
++ 	shop_active = false
++@@ -1431,11 +1460,173 @@
++ 		unpaid_items.append(item)
++ 		message = "%sを手に取った。未精算。" % str(item["name"])
++ 	else:
++-		apply_item_effect(str(item["name"]))
+++		add_inventory_item(str(item["name"]), false)
+++		message = "%sを拾った。" % str(item["name"])
++ 	if consume_turn:
++ 		end_turn()
++ 
++ 
+++func valid_inventory_item_name(name: String) -> bool:
+++	return name in ["薬", "兵糧丸", "忍気丸", "上薬", "大兵糧丸", "小巻物", "中巻物", "大巻物", "究極巻物"]
+++
+++
+++func add_inventory_item(name: String, identified: bool = false) -> void:
+++	if not valid_inventory_item_name(name):
+++		return
+++	inventory_items.append({"name": name, "identified": identified})
+++
+++
+++func sanitize_inventory_array(value: Variant) -> Array:
+++	var out: Array = []
+++	if typeof(value) != TYPE_ARRAY:
+++		return out
+++	for raw in value:
+++		if typeof(raw) != TYPE_DICTIONARY:
+++			continue
+++		var name := str(raw.get("name", ""))
+++		if valid_inventory_item_name(name):
+++			out.append({"name": name, "identified": bool(raw.get("identified", false))})
+++	return out
+++
+++
+++func inventory_entry_count() -> int:
+++	return 2 + inventory_items.size()
+++
+++
+++func inventory_selected_name() -> String:
+++	if inventory_selected == 0:
+++		return WEAPON_NAME
+++	if inventory_selected == 1:
+++		return ARMOR_NAME
+++	var idx := inventory_selected - 2
+++	if idx >= 0 and idx < inventory_items.size():
+++		return str(inventory_items[idx].get("name", ""))
+++	return ""
+++
+++
+++func open_inventory() -> void:
+++	if in_village or checkout_prompt or stairs_prompt or ad_menu:
+++		return
+++	inventory_menu = true
+++	inventory_selected = clamp(inventory_selected, 0, max(0, inventory_entry_count() - 1))
+++	message = "道具を確認する。"
+++	queue_redraw()
+++
+++
+++func close_inventory() -> void:
+++	inventory_menu = false
+++	message = "道具画面を閉じた。"
+++	queue_redraw()
+++
+++
+++func inventory_equip_selected() -> void:
+++	if inventory_selected == 0 or inventory_selected == 1:
+++		message = "%sは装備中。" % inventory_selected_name()
+++	else:
+++		message = "この道具は装備できない。"
+++	queue_redraw()
+++
+++
+++func inventory_use_selected(consume_turn: bool = true) -> void:
+++	var idx := inventory_selected - 2
+++	if idx < 0 or idx >= inventory_items.size():
+++		message = "装備品は使用できない。"
+++		queue_redraw()
+++		return
+++	var name := str(inventory_items[idx].get("name", ""))
+++	inventory_items.remove_at(idx)
+++	apply_item_effect(name)
+++	inventory_selected = clamp(inventory_selected, 0, max(0, inventory_entry_count() - 1))
+++	inventory_menu = false
+++	if consume_turn:
+++		end_turn()
+++	queue_redraw()
+++
+++
+++func inventory_identify_selected() -> void:
+++	var idx := inventory_selected - 2
+++	if idx < 0 or idx >= inventory_items.size():
+++		message = "%sは識別済み。" % inventory_selected_name()
+++		queue_redraw()
+++		return
+++	inventory_items[idx]["identified"] = true
+++	message = "%sを識別した。" % str(inventory_items[idx].get("name", ""))
+++	queue_redraw()
+++
+++
+++func handle_inventory_key(event: InputEvent) -> void:
+++	if event.keycode == KEY_ESCAPE or event.keycode == KEY_I:
+++		close_inventory()
+++	elif event.keycode == KEY_UP:
+++		inventory_selected = max(0, inventory_selected - 1)
+++	elif event.keycode == KEY_DOWN:
+++		inventory_selected = min(max(0, inventory_entry_count() - 1), inventory_selected + 1)
+++	elif event.keycode == KEY_E:
+++		inventory_equip_selected()
+++	elif event.keycode == KEY_U or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+++		inventory_use_selected()
+++	elif event.keycode == KEY_D:
+++		inventory_identify_selected()
+++	queue_redraw()
+++
+++
+++func handle_inventory_touch(pos: Vector2, portrait: bool) -> void:
+++	var panel_x := 60.0 if portrait else 270.0
+++	var panel_y := 225.0 if portrait else 120.0
+++	var row_h := 46.0
+++	var max_rows := 7
+++	for i in range(min(inventory_entry_count(), max_rows)):
+++		var r := Rect2(panel_x + 20.0, panel_y + 74.0 + i * row_h, 500.0, 40.0)
+++		if r.has_point(pos):
+++			inventory_selected = i
+++			queue_redraw()
+++			return
+++	var action_y := panel_y + 420.0
+++	var actions = [["equip", panel_x + 20.0], ["use", panel_x + 150.0], ["identify", panel_x + 280.0], ["back", panel_x + 410.0]]
+++	for action in actions:
+++		if Rect2(float(action[1]), action_y, 115.0, 52.0).has_point(pos):
+++			match str(action[0]):
+++				"equip": inventory_equip_selected()
+++				"use": inventory_use_selected()
+++				"identify": inventory_identify_selected()
+++				"back": close_inventory()
+++			return
+++
+++
+++func inventory_display_name(index: int) -> String:
+++	if index == 0:
+++		return "%s（装備中）" % WEAPON_NAME
+++	if index == 1:
+++		return "%s（装備中）" % ARMOR_NAME
+++	var idx := index - 2
+++	if idx < 0 or idx >= inventory_items.size():
+++		return ""
+++	var entry: Dictionary = inventory_items[idx]
+++	return str(entry.get("name", "")) if bool(entry.get("identified", false)) else "未識別の道具"
+++
+++
+++func draw_inventory_overlay(portrait: bool) -> void:
+++	var panel_x := 60.0 if portrait else 270.0
+++	var panel_y := 225.0 if portrait else 120.0
+++	var panel_w := 560.0
+++	draw_rect(Rect2(panel_x, panel_y, panel_w, 500.0), Color(0.05, 0.07, 0.09, 0.98))
+++	draw_rect(Rect2(panel_x, panel_y, panel_w, 500.0), Color("#e4cf7a"), false, 2.0)
+++	draw_ui_text(Vector2(panel_x + 22.0, panel_y + 48.0), "道具 %d点" % inventory_items.size(), HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color.WHITE)
+++	var row_h := 46.0
+++	var max_rows := 7
+++	for i in range(min(inventory_entry_count(), max_rows)):
+++		var r := Rect2(panel_x + 20.0, panel_y + 74.0 + i * row_h, 500.0, 40.0)
+++		draw_rect(r, Color("#343527") if i == inventory_selected else Color("#202934"))
+++		draw_rect(r, Color("#dbc66e") if i == inventory_selected else Color("#4c5865"), false, 1.5)
+++		draw_ui_text(r.position + Vector2(12, 27), inventory_display_name(i), HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
+++	var action_y := panel_y + 420.0
+++	var labels = [["装備", panel_x + 20.0], ["使用", panel_x + 150.0], ["識別", panel_x + 280.0], ["戻る", panel_x + 410.0]]
+++	for action in labels:
+++		var r := Rect2(float(action[1]), action_y, 115.0, 52.0)
+++		draw_rect(r, Color("#252c35"))
+++		draw_rect(r, Color("#596575"), false, 1.5)
+++		draw_ui_text(r.position + Vector2(22, 34), str(action[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color.WHITE)
+++
++ func item_shop_price(name: String) -> int:
++ 	if name == "薬":
++ 		return 8
++@@ -1522,9 +1713,9 @@
++ 	run_coins -= from_run
++ 	coins -= total - from_run
++ 	for item in unpaid_items:
++-		apply_item_effect(str(item["name"]))
+++		add_inventory_item(str(item["name"]), false)
++ 	unpaid_items.clear()
++-	message = "精算した。"
+++	message = "精算した。道具袋に入れた。"
++ 	save_run_state()
++ 	queue_redraw()
++ 
++@@ -1540,7 +1731,7 @@
++ 	var stolen_count = unpaid_items.size()
++ 	for item in unpaid_items:
++ 		if typeof(item) == TYPE_DICTIONARY:
++-			apply_item_effect(str(item.get("name", "")))
+++			add_inventory_item(str(item.get("name", "")), false)
++ 	unpaid_items.clear()
++ 	message = "%d点を盗んだ！ 商人が追ってくる。" % stolen_count
++ 	save_run_state()
++@@ -1966,6 +2157,7 @@
++ 		"explored": explored,
++ 		"enemies": enemies,
++ 		"items": items,
+++		"inventory_items": inventory_items,
++ 		"shop_active": shop_active,
++ 		"shop_hostile": shop_hostile,
++ 		"merchant_type": merchant_type,
++@@ -2043,6 +2235,9 @@
++ 	defense_power = max(0, int(data.get("defense_power", 1 + perm_defense)))
++ 	enemies = sanitize_enemy_array(data.get("enemies", []))
++ 	items = sanitize_item_array(data.get("items", []))
+++	inventory_items = sanitize_inventory_array(data.get("inventory_items", [])) if version >= 5 else []
+++	inventory_menu = false
+++	inventory_selected = 0
++ 	shop_active = bool(data.get("shop_active", false))
++ 	shop_hostile = bool(data.get("shop_hostile", false))
++ 	merchant_type = str(data.get("merchant_type", "旅商人"))
++@@ -2134,7 +2329,7 @@
++ 		"attack_power": attack_power, "defense_power": defense_power,
++ 		"in_village": in_village, "village_menu": village_menu,
++ 		"map": map.duplicate(true), "explored": explored.duplicate(true),
++-		"enemies": enemies.duplicate(true), "items": items.duplicate(true),
+++		"enemies": enemies.duplicate(true), "items": items.duplicate(true), "inventory_items": inventory_items.duplicate(true),
++ 		"shop_active": shop_active, "shop_hostile": shop_hostile, "merchant_type": merchant_type, "shop_rect": shop_rect,
++ 		"shopkeeper": shopkeeper.duplicate(true), "shopkeeper_home": shopkeeper_home,
++ 		"shop_items": shop_items.duplicate(true), "unpaid_items": unpaid_items.duplicate(true),
++@@ -2173,6 +2368,9 @@
++ 	explored = state["explored"].duplicate(true)
++ 	enemies = state["enemies"].duplicate(true)
++ 	items = state["items"].duplicate(true)
+++	inventory_items = state.get("inventory_items", []).duplicate(true)
+++	inventory_menu = false
+++	inventory_selected = 0
++ 	shop_active = bool(state["shop_active"])
++ 	shop_hostile = bool(state["shop_hostile"])
++ 	merchant_type = str(state["merchant_type"])
++@@ -2208,7 +2406,7 @@
++ func debug_test_save_contract() -> String:
++ 	generate_floor()
++ 	var data = build_run_state()
++-	var required = ["player", "stairs_pos", "map", "explored", "enemies", "items", "unpaid_items", "merchant_bound_turns", "clone_active", "clone_pos", "clone_steps_left", "merchant_type", "last_ad_checkpoint_floor"]
+++	var required = ["player", "stairs_pos", "map", "explored", "enemies", "items", "inventory_items", "unpaid_items", "merchant_bound_turns", "clone_active", "clone_pos", "clone_steps_left", "merchant_type", "last_ad_checkpoint_floor"]
++ 	for key in required:
++ 		if not data.has(key):
++ 			return "FAIL 保存契約:%s" % key
++@@ -2277,12 +2475,11 @@
++ func debug_test_shop_theft() -> String:
++ 	generate_floor()
++ 	generate_shop()
++-	hp = max(1, max_hp - 10)
++-	var before_hp = hp
+++	inventory_items = []
++ 	unpaid_items = [{"name": "薬", "price": 8, "shop": true}]
++ 	shop_hostile = false
++ 	try_theft_escape()
++-	var ok = shop_hostile and unpaid_items.is_empty() and hp > before_hp
+++	var ok = shop_hostile and unpaid_items.is_empty() and inventory_items.size() == 1 and str(inventory_items[0].get("name", "")) == "薬"
++ 	return "PASS 盗み" if ok else "FAIL 盗み"
++ 
++ 
++@@ -2355,6 +2552,25 @@
++ 	return "PASS アイテム一覧"
++ 
++ 
+++func debug_test_inventory_contract() -> String:
+++	inventory_items = []
+++	add_inventory_item("薬", false)
+++	if inventory_items.size() != 1 or bool(inventory_items[0].get("identified", true)):
+++		return "FAIL 道具取得"
+++	inventory_selected = 2
+++	inventory_identify_selected()
+++	if not bool(inventory_items[0].get("identified", false)):
+++		return "FAIL 道具識別"
+++	hp = max(1, max_hp - 10)
+++	var before_hp := hp
+++	inventory_use_selected(false)
+++	if not inventory_items.is_empty() or hp <= before_hp:
+++		return "FAIL 道具使用"
+++	inventory_selected = 0
+++	inventory_equip_selected()
+++	return "PASS 道具装備使用識別" if message.find("装備中") >= 0 else "FAIL 道具装備"
+++
+++
++ func debug_test_spawn_safety() -> String:
++ 	generate_floor()
++ 	var occupied_enemy: Dictionary = {}
++@@ -2454,7 +2670,7 @@
++ 
++ 
++ func debug_test_ui_glyph_contract() -> String:
++-	var required := "忍道里魂銭恒久攻撃防御初期気鍛冶屋術研究所録帳成長出陣階段奥義精算隠身縛影煙分待方向操作機能ップ"
+++	var required := "忍道里魂銭恒久攻撃防御初期気鍛冶屋術研究所録帳成長出陣階段奥義精算隠身縛影煙分待方向操作機能ップ具装備使用識別戻持物未点"
++ 	for i in range(required.length()):
++ 		var ch := required.substr(i, 1)
++ 		if not UI_GLYPH_MAP.has(ch):
++@@ -2478,6 +2694,7 @@
++ 		debug_test_enemy_curve(),
++ 		debug_test_ranged_line(),
++ 		debug_test_item_catalog(),
+++		debug_test_inventory_contract(),
++ 		debug_test_boss_gate(),
++ 		debug_test_spawn_safety(),
++ 		debug_test_boss_resume_repair(),
++@@ -2518,6 +2735,9 @@
++ 	if in_village:
++ 		handle_village_touch_portrait(pos)
++ 		return
+++	if inventory_menu:
+++		handle_inventory_touch(pos, true)
+++		return
++ 	if checkout_prompt or stairs_prompt or ad_menu:
++ 		handle_modal_touch_portrait(pos)
++ 		return
++@@ -2547,7 +2767,8 @@
++ 		var r: Rect2 = a[0]
++ 		if r.has_point(pos):
++ 			var action := str(a[1])
++-			if action == "pickup": pickup()
+++			if action == "inventory": open_inventory()
+++			elif action == "pickup": pickup()
++ 			elif action == "stairs": use_stairs()
++ 			elif action == "ultimate": use_ultimate()
++ 			elif action == "buy": buy_unpaid()
++@@ -2763,12 +2984,14 @@
++ 	if unpaid_items.size() > 0:
++ 		draw_ui_text(Vector2(420, 603), "未精算 %d点/%d銭" % [unpaid_items.size(), shop_total_unpaid()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ff9a7a"))
++ 	draw_mobile_controls_portrait()
++-	if checkout_prompt or stairs_prompt or ad_menu:
+++	if inventory_menu:
+++		draw_inventory_overlay(true)
+++	elif checkout_prompt or stairs_prompt or ad_menu:
++ 		draw_modal_overlay_portrait()
++ 
++ 
++ func draw_mobile_controls_portrait() -> void:
++-	var actions = [["拾", "pickup"], ["階段", "stairs"], ["奥義", "ultimate"], ["精算", "buy"], ["隠身", "hide"], ["縛影", "bind"], ["煙", "smoke"], ["分身", "clone"], ["広告", "ad"]]
+++	var actions = [["道具", "inventory"], ["階段", "stairs"], ["奥義", "ultimate"], ["精算", "buy"], ["隠身", "hide"], ["縛影", "bind"], ["煙", "smoke"], ["分身", "clone"], ["広告", "ad"]]
++ 	for i in range(actions.size()):
++ 		var col := i % 3
++ 		var row := i / 3
++@@ -2963,7 +3186,9 @@
++ 		draw_ui_text(Vector2(16, HUD_Y + 108), "DEBUG F2商店 F3ボス F9盗み準備 F12総合 / J分身", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffcf6b"))
++ 
++ 	draw_mobile_controls()
++-	if checkout_prompt or stairs_prompt or ad_menu:
+++	if inventory_menu:
+++		draw_inventory_overlay(false)
+++	elif checkout_prompt or stairs_prompt or ad_menu:
++ 		draw_modal_overlay()
++ 
++ 
++@@ -2980,6 +3205,8 @@
++ 
++ 
++ func touch_action_available(action: String) -> bool:
+++	if action == "inventory":
+++		return true
++ 	if action == "stairs":
++ 		return player == stairs_pos and (not boss_spawned or boss_defeated)
++ 	if action == "ultimate":
++@@ -3009,7 +3236,7 @@
++ 			draw_ui_text(r.position + Vector2(13, 29), labels[y][x], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
++ 
++ 	var actions = [
++-		["拾", "pickup", 20, 78], ["階段", "stairs", 104, 78], ["奥義", "ultimate", 188, 78], ["精算", "buy", 272, 78],
+++		["道具", "inventory", 20, 78], ["階段", "stairs", 104, 78], ["奥義", "ultimate", 188, 78], ["精算", "buy", 272, 78],
++ 		["隠身", "hide", 356, 78], ["縛影", "bind", 440, 86], ["煙", "smoke", 532, 68], ["分身", "clone", 606, 78], ["広告", "ad", 690, 72]
++ 	]
++ 	for a in actions:
++diff -ruN /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/STATIC_AUDIT_1_0_54_RUN08.json /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/STATIC_AUDIT_1_0_54_RUN08.json
++--- /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/STATIC_AUDIT_1_0_54_RUN08.json	1970-01-01 00:00:00.000000000 +0000
+++++ /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/STATIC_AUDIT_1_0_54_RUN08.json	2026-09-10 22:12:12.298930463 +0000
++@@ -0,0 +1,11 @@
+++{
+++  "version": "1.0.54",
+++  "status": "PASS",
+++  "functions": 147,
+++  "unique_functions": 147,
+++  "save_schema": 5,
+++  "monte_carlo_floor_generations": 50000,
+++  "monte_carlo_min_safe_path_cells": 37,
+++  "issues": [],
+++  "godot_engine_execution": "NOT RUN by this Python checker"
+++}
+diff -ruN /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/tools/preflight_static.py /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/tools/preflight_static.py
+--- /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/tools/preflight_static.py	2026-09-03 03:54:36.000000000 +0000
++++ /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/tools/preflight_static.py	2026-09-10 22:11:53.197403305 +0000
+@@ -6,7 +6,7 @@
+ MAIN = ROOT / 'Main.gd'
+ PROJECT = ROOT / 'project.godot'
+ EXPORT = ROOT / 'export_presets.ios.template.cfg'
+-VERSION = '1.0.45'
++VERSION = '1.0.54'
+ MAP_W, MAP_H = 31, 15
+ 
+ issues=[]
+@@ -40,22 +40,22 @@
+     if clean.count(a)!=clean.count(b): issues.append(f'unbalanced {a}{b}: {clean.count(a)}/{clean.count(b)}')
+ 
+ if f'const VERSION := "{VERSION}"' not in s: issues.append('Main.gd version mismatch')
+-if f'Ver.{VERSION}' not in proj: issues.append('project.godot version mismatch')
++if f'config/version="{VERSION}"' not in proj: issues.append('project.godot version mismatch')
+ if f'application/short_version="{VERSION}"' not in exp: issues.append('iOS short version mismatch')
+-if 'application/version="45"' not in exp: issues.append('iOS build version mismatch')
+-if 'const RUN_SAVE_VERSION := 4' not in s: issues.append('save schema is not v4')
++if 'application/version="54"' not in exp: issues.append('iOS build version mismatch')
++if 'const RUN_SAVE_VERSION := 5' not in s: issues.append('save schema is not v5')
+ 
+ required_funcs = [
+  'generate_floor','carve_safe_path','has_path_between','spawn_enemy','spawn_boss','generate_shop',
+  'use_shadow_bind','use_shadow_clone','enemy_hunt_target','use_smoke_ninjutsu','use_ultimate',
+  'register_ad_checkpoint','save_run_state','load_run_state','repair_loaded_run_state',
+  'debug_run_regression_suite','debug_test_floor_reachability','debug_test_shadow_clone_contract',
+- 'debug_test_boss_resume_repair','debug_test_spawn_safety','debug_test_ui_glyph_contract','content_offset'
++ 'debug_test_boss_resume_repair','debug_test_spawn_safety','debug_test_ui_glyph_contract','debug_test_inventory_contract','open_inventory','inventory_use_selected','inventory_identify_selected','content_offset'
+ ]
+ for fn in required_funcs:
+     if fn not in funcs: issues.append('missing function: '+fn)
+ 
+-for field in ['stairs_pos','clone_active','clone_pos','clone_steps_left','merchant_type','last_ad_checkpoint_floor']:
++for field in ['stairs_pos','clone_active','clone_pos','clone_steps_left','merchant_type','last_ad_checkpoint_floor','inventory_items']:
+     if f'"{field}":' not in s: issues.append('missing save field: '+field)
+ 
+ for ref in re.findall(r'"res://([^"\n]+)"', proj + '\n' + (ROOT/'Main.tscn').read_text(encoding='utf-8')):
+@@ -66,7 +66,7 @@
+ if not (ROOT/'ui_glyphs.png').exists(): issues.append('bitmap glyph atlas missing')
+ if 'pointing/emulate_touch_from_mouse=true' not in proj: issues.append('touch emulation missing')
+ if '--shinobi-regression' not in s: issues.append('headless regression entry missing')
+-if 'const RELEASE_CHANNEL := "APP STORE PREP"' not in s: issues.append('APP STORE PREP marker missing')
++if 'const RELEASE_CHANNEL := "PLAY UI SYSTEM RC"' not in s: issues.append('PLAY UI SYSTEM RC marker missing')
+ if 'const DEVELOPMENT_UI_ENABLED := false' not in s: issues.append('development UI not disabled for RC')
+ if 'const ADS_ENABLED := false' not in s: issues.append('initial release ads must remain disabled until native SDK integration')
+ if 'debug_test_final_floor_contract' not in funcs: issues.append('100F release contract regression missing')
+@@ -126,7 +126,7 @@
+  'status': 'PASS' if not issues else 'FAIL',
+  'functions': len(funcs),
+  'unique_functions': len(set(funcs)),
+- 'save_schema': 4,
++ 'save_schema': 5,
+  'monte_carlo_floor_generations': N,
+  'monte_carlo_min_safe_path_cells': min_safe,
+  'issues': issues,
+Binary files /mnt/data/_step07_extract/shinobi_rogue_v1_0_54_STEP07_PLAY_CORE/ui_glyphs.png and /mnt/data/shinobi_rogue_v1_0_54_STEP08_INVENTORY/ui_glyphs.png differ

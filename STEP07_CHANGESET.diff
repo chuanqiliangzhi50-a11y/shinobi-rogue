@@ -1,0 +1,207 @@
+--- v1.0.52/Main.gd
++++ v1.0.54-step07/Main.gd
+@@ -1,7 +1,7 @@
+ extends Node2D
+ 
+-const VERSION := "1.0.52"
+-const RELEASE_CHANNEL := "QUALITY IMPROVEMENT PREVIEW"
++const VERSION := "1.0.54"
++const RELEASE_CHANNEL := "PLAY UI SYSTEM RC"
+ const DEVELOPMENT_UI_ENABLED := false
+ const ADS_ENABLED := false # Initial App Store release: ad SDK not integrated yet.
+ const MAP_W := 31
+@@ -65,6 +65,7 @@
+ var shop_items: Array = []
+ var unpaid_items: Array = []
+ var checkout_prompt := false
++var stairs_prompt := false
+ var merchant_bound_turns := 0
+ 
+ var smoke_turns := 0
+@@ -512,7 +513,9 @@
+ 	"形": Vector2i(5, 12),
+ 	"日": Vector2i(6, 12),
+ 	"本": Vector2i(7, 12),
+-	"語": Vector2i(8, 12)
++	"語": Vector2i(8, 12),
++	"次": Vector2i(9, 12),
++	"降": Vector2i(10, 12)
+ }
+ 
+ 
+@@ -558,7 +561,7 @@
+ 
+ 
+ func _process(delta: float) -> void:
+-	if hide_hold_active and not in_village and not checkout_prompt and not ad_menu:
++	if hide_hold_active and not in_village and not checkout_prompt and not stairs_prompt and not ad_menu:
+ 		hide_hold_elapsed += delta
+ 		if hide_hold_elapsed >= HIDE_HOLD_INTERVAL:
+ 			hide_hold_elapsed = 0.0
+@@ -586,6 +589,13 @@
+ 			confirm_checkout(true)
+ 		elif event.keycode == KEY_N or event.keycode == KEY_ESCAPE:
+ 			confirm_checkout(false)
++		return
++
++	if stairs_prompt:
++		if event.keycode == KEY_Y or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
++			confirm_stairs(true)
++		elif event.keycode == KEY_N or event.keycode == KEY_ESCAPE:
++			confirm_stairs(false)
+ 		return
+ 
+ 	if ad_menu:
+@@ -625,7 +635,7 @@
+ 	elif event.keycode == KEY_X:
+ 		use_ultimate()
+ 	elif event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER:
+-		use_stairs()
++		request_stairs_confirmation()
+ 	elif DEVELOPMENT_UI_ENABLED and (event.keycode == KEY_F12 or event.keycode == KEY_T):
+ 		debug_run_regression_suite()
+ 	elif DEVELOPMENT_UI_ENABLED and debug_mode and event.keycode == KEY_F2:
+@@ -692,7 +702,7 @@
+ 	if in_village:
+ 		handle_village_touch(pos)
+ 		return
+-	if checkout_prompt or ad_menu:
++	if checkout_prompt or stairs_prompt or ad_menu:
+ 		handle_modal_touch(pos)
+ 		return
+ 	if is_hide_button_position(pos):
+@@ -798,6 +808,12 @@
+ 			confirm_checkout(true)
+ 		elif Rect2(590, 390, 160, 54).has_point(pos):
+ 			confirm_checkout(false)
++		return
++	if stairs_prompt:
++		if Rect2(350, 390, 160, 54).has_point(pos):
++			confirm_stairs(true)
++		elif Rect2(590, 390, 160, 54).has_point(pos):
++			confirm_stairs(false)
+ 		return
+ 	if ad_menu:
+ 		if Rect2(255, 355, 130, 54).has_point(pos):
+@@ -1251,10 +1267,14 @@
+ 	var was_inside = is_inside_shop(player)
+ 	player = target
+ 	on_player_walked()
++	if cell_has_item(player):
++		pickup(false)
+ 	var now_inside = is_inside_shop(player)
+ 	if was_inside and not now_inside and unpaid_items.size() > 0:
+ 		try_theft_escape()
+ 	end_turn()
++	if not in_village and player == stairs_pos:
++		request_stairs_confirmation()
+ 
+ 
+ func attack_enemy(index: int) -> void:
+@@ -1396,7 +1416,7 @@
+ 	return_village(cause)
+ 
+ 
+-func pickup() -> void:
++func pickup(consume_turn: bool = true) -> void:
+ 	var found = -1
+ 	for i in range(items.size()):
+ 		if items[i]["pos"] == player:
+@@ -1412,7 +1432,8 @@
+ 		message = "%sを手に取った。未精算。" % str(item["name"])
+ 	else:
+ 		apply_item_effect(str(item["name"]))
+-	end_turn()
++	if consume_turn:
++		end_turn()
+ 
+ 
+ func item_shop_price(name: String) -> int:
+@@ -1625,6 +1646,27 @@
+ 					boss_defeated = true
+ 	message = "奥義・影滅！"
+ 	end_turn()
++
++
++func request_stairs_confirmation() -> void:
++	if player != stairs_pos:
++		message = "階段の上にいない。"
++		return
++	if boss_spawned and not boss_defeated:
++		message = "ボスを倒さなければ進めない。"
++		return
++	stairs_prompt = true
++	message = "次の階に降りますか？"
++	queue_redraw()
++
++
++func confirm_stairs(yes: bool) -> void:
++	stairs_prompt = false
++	if not yes:
++		message = "この階にいる。"
++		queue_redraw()
++		return
++	use_stairs()
+ 
+ 
+ func use_stairs() -> void:
+@@ -2476,7 +2518,7 @@
+ 	if in_village:
+ 		handle_village_touch_portrait(pos)
+ 		return
+-	if checkout_prompt or ad_menu:
++	if checkout_prompt or stairs_prompt or ad_menu:
+ 		handle_modal_touch_portrait(pos)
+ 		return
+ 	var hide_r := Rect2(180, 715, 145, 55)
+@@ -2567,6 +2609,10 @@
+ 	if checkout_prompt:
+ 		if Rect2(100, 555, 220, 70).has_point(pos): confirm_checkout(true)
+ 		elif Rect2(400, 555, 220, 70).has_point(pos): confirm_checkout(false)
++		return
++	if stairs_prompt:
++		if Rect2(100, 555, 220, 70).has_point(pos): confirm_stairs(true)
++		elif Rect2(400, 555, 220, 70).has_point(pos): confirm_stairs(false)
+ 		return
+ 	if ad_menu:
+ 		var rects = [Rect2(80,500,250,70),Rect2(390,500,250,70),Rect2(80,590,250,70),Rect2(390,590,250,70)]
+@@ -2717,7 +2763,7 @@
+ 	if unpaid_items.size() > 0:
+ 		draw_ui_text(Vector2(420, 603), "未精算 %d点/%d銭" % [unpaid_items.size(), shop_total_unpaid()], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("#ff9a7a"))
+ 	draw_mobile_controls_portrait()
+-	if checkout_prompt or ad_menu:
++	if checkout_prompt or stairs_prompt or ad_menu:
+ 		draw_modal_overlay_portrait()
+ 
+ 
+@@ -2751,8 +2797,8 @@
+ func draw_modal_overlay_portrait() -> void:
+ 	draw_rect(Rect2(40,320,640,360),Color(0.05,0.07,0.09,0.97))
+ 	draw_rect(Rect2(40,320,640,360),Color("#e4cf7a"),false,3)
+-	if checkout_prompt:
+-		draw_ui_text(Vector2(85,420),"商品を精算しますか？",HORIZONTAL_ALIGNMENT_LEFT,-1,28,Color.WHITE)
++	if checkout_prompt or stairs_prompt:
++		draw_ui_text(Vector2(85,420), "商品を精算しますか？" if checkout_prompt else "次の階に降りますか？", HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color.WHITE)
+ 		var yes := Rect2(100,555,220,70)
+ 		var no := Rect2(400,555,220,70)
+ 		for r in [yes,no]:
+@@ -2917,7 +2963,7 @@
+ 		draw_ui_text(Vector2(16, HUD_Y + 108), "DEBUG F2商店 F3ボス F9盗み準備 F12総合 / J分身", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("#ffcf6b"))
+ 
+ 	draw_mobile_controls()
+-	if checkout_prompt or ad_menu:
++	if checkout_prompt or stairs_prompt or ad_menu:
+ 		draw_modal_overlay()
+ 
+ 
+@@ -2991,8 +3037,8 @@
+ func draw_modal_overlay() -> void:
+ 	draw_rect(Rect2(220, 220, 660, 260), Color(0.05, 0.07, 0.09, 0.96))
+ 	draw_rect(Rect2(220, 220, 660, 260), Color("#e4cf7a"), false, 2)
+-	if checkout_prompt:
+-		draw_ui_text(Vector2(285, 300), "商品を精算しますか？", HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color.WHITE)
++	if checkout_prompt or stairs_prompt:
++		draw_ui_text(Vector2(285, 300), "商品を精算しますか？" if checkout_prompt else "次の階に降りますか？", HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color.WHITE)
+ 		var yes_r = Rect2(350, 390, 160, 54)
+ 		var no_r = Rect2(590, 390, 160, 54)
+ 		for r in [yes_r, no_r]:
