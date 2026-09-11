@@ -564,7 +564,9 @@ const UI_GLYPH_MAP := {
 	"袋": Vector2i(8, 13),
 	"得": Vector2i(9, 13),
 	"認": Vector2i(10, 13),
-	"閉": Vector2i(11, 13)
+	"閉": Vector2i(11, 13),
+	"飛": Vector2i(12, 13),
+	"罠": Vector2i(13, 13)
 }
 
 
