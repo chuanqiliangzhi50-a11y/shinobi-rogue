@@ -1,0 +1,113 @@
+name: Build and deploy Shinobi Rogue Web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.7.2 and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_VERSION="4.7.2-stable"
+          BASE="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}"
+          curl -fL --retry 3 -o /tmp/godot.zip "${BASE}/Godot_v4.7.2-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          sudo install -m 0755 /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 /usr/local/bin/godot
+          curl -fL --retry 3 -o /tmp/templates.tpz "${BASE}/Godot_v4.7.2-stable_export_templates.tpz"
+          rm -rf /tmp/godot-templates
+          mkdir -p /tmp/godot-templates "$HOME/.local/share/godot/export_templates"
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          rm -rf "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          mv /tmp/godot-templates/templates "$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          godot --version
+
+      - name: Regression and Web export
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x BUILD_WEB_LINUX.sh
+          ./BUILD_WEB_LINUX.sh
+          test -s web/index.html
+          test -s web/index.js
+          test -s web/index.pck
+          test -s web/index.wasm
+          echo "WASM size: $(wc -c < web/index.wasm) bytes"
+
+      - name: Remove stale PWA cache on existing installs
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > web/index.service.worker.js <<'JS'
+          self.addEventListener('install', () => self.skipWaiting());
+          self.addEventListener('activate', (event) => {
+            event.waitUntil((async () => {
+              const keys = await caches.keys();
+              await Promise.all(keys.map((key) => caches.delete(key)));
+              await self.registration.unregister();
+              const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+              for (const client of windows) {
+                if ('navigate' in client) client.navigate(client.url);
+              }
+            })());
+          });
+          self.addEventListener('fetch', (event) => {
+            event.respondWith(fetch(event.request));
+          });
+          JS
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('web/index.html')
+          s = p.read_text(encoding='utf-8')
+          cleanup = '''<script>
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+              try {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (const reg of regs) await reg.unregister();
+                if ('caches' in window) {
+                  const keys = await caches.keys();
+                  await Promise.all(keys.map((key) => caches.delete(key)));
+                }
+              } catch (e) {
+                console.warn('Legacy PWA cleanup:', e);
+              }
+            });
+          }
+          </script>'''
+          if cleanup not in s:
+              s = s.replace('</head>', cleanup + '\n</head>', 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+          touch web/.nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
