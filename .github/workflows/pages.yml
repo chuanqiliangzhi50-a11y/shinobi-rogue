@@ -53,7 +53,7 @@ jobs:
           test -s web/index.wasm
           echo "WASM size: $(wc -c < web/index.wasm) bytes"
 
-      - name: Remove stale PWA cache on existing installs
+      - name: Remove stale PWA cache and add iPhone diagnostics
         shell: bash
         run: |
           set -euo pipefail
@@ -70,32 +70,57 @@ jobs:
               }
             })());
           });
-          self.addEventListener('fetch', (event) => {
-            event.respondWith(fetch(event.request));
-          });
+          self.addEventListener('fetch', (event) => event.respondWith(fetch(event.request)));
           JS
           python3 - <<'PY'
           from pathlib import Path
           p = Path('web/index.html')
           s = p.read_text(encoding='utf-8')
-          cleanup = '''<script>
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', async () => {
+          patch = r'''<script>
+          (() => {
+            const lines = [];
+            const add = (m) => {
+              lines.push(String(m));
+              const el = document.getElementById('shinobi-diag');
+              if (el) el.textContent = lines.join('\n');
+            };
+            window.__shinobiDiag = add;
+            window.addEventListener('error', e => add('JS ERROR: ' + (e.message || e.error || 'unknown')));
+            window.addEventListener('unhandledrejection', e => add('PROMISE ERROR: ' + (e.reason?.message || e.reason || 'unknown')));
+            document.addEventListener('DOMContentLoaded', async () => {
+              const box = document.createElement('pre');
+              box.id = 'shinobi-diag';
+              box.style.cssText = 'position:fixed;left:8px;top:8px;z-index:2147483647;max-width:calc(100vw - 16px);white-space:pre-wrap;background:rgba(0,0,0,.82);color:#fff;padding:7px;font:11px/1.3 monospace;border-radius:5px;pointer-events:none';
+              document.body.appendChild(box);
+              add('SHINOBI BOOT DIAG 1.0.54');
               try {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                for (const reg of regs) await reg.unregister();
-                if ('caches' in window) {
-                  const keys = await caches.keys();
-                  await Promise.all(keys.map((key) => caches.delete(key)));
-                }
-              } catch (e) {
-                console.warn('Legacy PWA cleanup:', e);
+                const c = document.createElement('canvas');
+                add('WebGL2: ' + (c.getContext('webgl2') ? 'OK' : 'NG'));
+              } catch (e) { add('WebGL2 ERROR: ' + e); }
+              add('WebAssembly: ' + (typeof WebAssembly === 'object' ? 'OK' : 'NG'));
+              for (const f of ['index.wasm', 'index.pck']) {
+                try {
+                  const r = await fetch(f, {method:'HEAD', cache:'no-store'});
+                  add(f + ': HTTP ' + r.status + ' ' + (r.headers.get('content-type') || 'no-type') + ' len=' + (r.headers.get('content-length') || '?'));
+                } catch (e) { add(f + ' HEAD ERROR: ' + e); }
               }
+              setTimeout(() => add('8s: Godot still loading if this box is visible'), 8000);
             });
-          }
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', async () => {
+                try {
+                  const regs = await navigator.serviceWorker.getRegistrations();
+                  for (const reg of regs) await reg.unregister();
+                  if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(key => caches.delete(key)));
+                  }
+                } catch (e) { add('CACHE CLEAN ERROR: ' + e); }
+              });
+            }
+          })();
           </script>'''
-          if cleanup not in s:
-              s = s.replace('</head>', cleanup + '\n</head>', 1)
+          s = s.replace('</head>', patch + '\n</head>', 1)
           p.write_text(s, encoding='utf-8')
           PY
           touch web/.nojekyll
