@@ -41,6 +41,12 @@ jobs:
           mv /tmp/godot-templates/templates "$HOME/.local/share/godot/export_templates/4.7.2.stable"
           godot --version
 
+      - name: Apply adopted portrait UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/apply_final_portrait_ui.py
+
       - name: Regression and Web export
         shell: bash
         run: |
