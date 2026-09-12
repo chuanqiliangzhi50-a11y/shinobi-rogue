@@ -46,6 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/apply_final_portrait_ui.py
+          python3 tools/apply_centered_portrait_camera.py
 
       - name: Regression and Web export
         shell: bash
