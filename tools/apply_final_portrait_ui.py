@@ -5,10 +5,31 @@ p = Path('Main.gd')
 s = p.read_text(encoding='utf-8')
 original = s
 
-# Align entity art with the actual portrait dungeon origin.
-s = re.sub(
-    r'(func portrait_cell_center\(p: Vector2i\) -> Vector2:\n\tconst PTILE := 21\n\tconst PMAP_X := 34\n\tconst PMAP_Y := )\d+',
-    r'\g<1>154', s, count=1)
+# Replace portrait positioning with a close camera viewport. Presentation only.
+portrait_helpers = """func portrait_camera_origin() -> Vector2i:
+\tconst VIEW_W := 15
+\tconst VIEW_H := 11
+\tvar ox: int = clampi(player.x - int(VIEW_W / 2), 0, MAP_W - VIEW_W)
+\tvar oy: int = clampi(player.y - int(VIEW_H / 2), 0, MAP_H - VIEW_H)
+\treturn Vector2i(ox, oy)
+
+
+func portrait_cell_in_view(p: Vector2i) -> bool:
+\tconst VIEW_W := 15
+\tconst VIEW_H := 11
+\tvar origin := portrait_camera_origin()
+\treturn p.x >= origin.x and p.y >= origin.y and p.x < origin.x + VIEW_W and p.y < origin.y + VIEW_H
+
+
+func portrait_cell_center(p: Vector2i) -> Vector2:
+\tconst PTILE := 42
+\tconst PMAP_X := 45
+\tconst PMAP_Y := 150
+\tvar origin := portrait_camera_origin()
+\tvar local := p - origin
+\treturn Vector2(PMAP_X + local.x * PTILE + PTILE * 0.5, PMAP_Y + local.y * PTILE + PTILE * 0.5)
+"""
+s, n0 = re.subn(r'func portrait_cell_center\(p: Vector2i\) -> Vector2:\n.*?(?=\n\nfunc handle_press_portrait)', portrait_helpers, s, count=1, flags=re.S)
 
 handle = '''func handle_press_portrait(pos: Vector2) -> void:
 \tif in_village:
@@ -22,7 +43,7 @@ handle = '''func handle_press_portrait(pos: Vector2) -> void:
 \t\treturn
 
 \t# Adopted portrait UI: round map toggle + four-command diamond + 8-way pad.
-\tif Rect2(28, 638, 92, 92).has_point(pos):
+\tif Rect2(30, 150, 86, 86).has_point(pos):
 \t\ttoggle_map_visibility()
 \t\treturn
 
@@ -58,9 +79,11 @@ handle = '''func handle_press_portrait(pos: Vector2) -> void:
 s, n1 = re.subn(r'func handle_press_portrait\(pos: Vector2\) -> void:\n.*?(?=\n\nfunc handle_village_touch_portrait)', handle, s, count=1, flags=re.S)
 
 draw = '''func draw_dungeon_portrait() -> void:
-\tconst PTILE := 21
-\tconst PMAP_X := 34
-\tconst PMAP_Y := 154
+\tconst PTILE := 42
+\tconst PMAP_X := 45
+\tconst PMAP_Y := 150
+\tconst VIEW_W := 15
+\tconst VIEW_H := 11
 \tdraw_rect(Rect2(0, 0, 720, 1100), Color("#080c11"))
 \tdraw_rect(Rect2(0, 0, 720, 128), Color("#101822"))
 \tdraw_rect(Rect2(0, 126, 720, 2), Color("#8d7740"))
@@ -74,38 +97,45 @@ draw = '''func draw_dungeon_portrait() -> void:
 \tdraw_ui_text(Vector2(540, 66), "忍気 %d" % ninja_energy, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("#e7ebef"))
 \tdraw_ui_text(Vector2(20, 102), "忍道:%s   銭 %d(+%d)   忍魂 %d(+%d)   T%d" % [style_name, coins, run_coins, souls, run_souls, turn_no], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("#aeb7c2"))
 
-\t# Enlarged dungeon panel; old command grid is intentionally removed.
+\t# Torneko-like close camera: 15x11 cells around the player. Presentation only.
 \tdraw_panel(Rect2(20, 140, 680, 482), Color("#0b0f14"), Color("#8d7740"), 2.0)
+\tvar origin := portrait_camera_origin()
 \tif map_visible:
-\t\tfor y in range(MAP_H):
-\t\t\tfor x in range(MAP_W):
-\t\t\t\tvar p := Vector2(PMAP_X + x * PTILE, PMAP_Y + y * PTILE)
-\t\t\t\tvar seen := validate_grid(explored) and bool(explored[y][x])
-\t\t\t\tvar tile := str(map[y][x]) if validate_grid(map) else "#"
-\t\t\t\tdraw_dungeon_tile(p, tile, seen, x, y, PTILE)
+\t\tfor vy in range(VIEW_H):
+\t\t\tfor vx in range(VIEW_W):
+\t\t\t\tvar wx := origin.x + vx
+\t\t\t\tvar wy := origin.y + vy
+\t\t\t\tvar p := Vector2(PMAP_X + vx * PTILE, PMAP_Y + vy * PTILE)
+\t\t\t\tvar seen := validate_grid(explored) and bool(explored[wy][wx])
+\t\t\t\tvar tile := str(map[wy][wx]) if validate_grid(map) else "#"
+\t\t\t\tdraw_dungeon_tile(p, tile, seen, wx, wy, PTILE)
 \tfor trap in placed_traps:
 \t\tvar tp: Vector2i = trap
-\t\tif is_visible_cell(tp): draw_entity_visual(portrait_cell_center(tp), "trap", "罠", 14, Color("#e0a35c"), PTILE)
+\t\tif portrait_cell_in_view(tp) and is_visible_cell(tp): draw_entity_visual(portrait_cell_center(tp), "trap", "罠", 20, Color("#e0a35c"), PTILE)
 \tfor item in items:
 \t\tvar ip: Vector2i = item["pos"]
-\t\tif is_visible_cell(ip): draw_entity_visual(portrait_cell_center(ip), "item", "物", 14, Color("#f0d45f"), PTILE)
+\t\tif portrait_cell_in_view(ip) and is_visible_cell(ip): draw_entity_visual(portrait_cell_center(ip), "item", "物", 20, Color("#f0d45f"), PTILE)
 \tfor e in enemies:
 \t\tvar ep: Vector2i = e["pos"]
-\t\tif is_visible_cell(ep): draw_entity_visual(portrait_cell_center(ep), "boss" if bool(e["boss"]) else "enemy", "将" if bool(e["boss"]) else "敵", 14, Color("#f08a7d"), PTILE)
+\t\tif portrait_cell_in_view(ep) and is_visible_cell(ep): draw_entity_visual(portrait_cell_center(ep), "boss" if bool(e["boss"]) else "enemy", "将" if bool(e["boss"]) else "敵", 20, Color("#f08a7d"), PTILE)
 \tif shopkeeper.size() > 0:
 \t\tvar sp: Vector2i = shopkeeper["pos"]
-\t\tif is_visible_cell(sp): draw_entity_visual(portrait_cell_center(sp), "dark_merchant" if merchant_type == "闇商人" else "merchant", "闇" if merchant_type == "闇商人" else "商", 14, Color("#c59cff") if merchant_type == "闇商人" else Color("#8ad5a2"), PTILE)
-\tif clone_active and is_visible_cell(clone_pos): draw_entity_visual(portrait_cell_center(clone_pos), "clone", "影", 14, Color("#91a9d6"), PTILE)
-\tdraw_entity_visual(portrait_cell_center(player), "player", "忍", 15, Color("#ffffff"), PTILE)
+\t\tif portrait_cell_in_view(sp) and is_visible_cell(sp): draw_entity_visual(portrait_cell_center(sp), "dark_merchant" if merchant_type == "闇商人" else "merchant", "闇" if merchant_type == "闇商人" else "商", 20, Color("#c59cff") if merchant_type == "闇商人" else Color("#8ad5a2"), PTILE)
+\tif clone_active and portrait_cell_in_view(clone_pos) and is_visible_cell(clone_pos): draw_entity_visual(portrait_cell_center(clone_pos), "clone", "影", 20, Color("#91a9d6"), PTILE)
+\tif portrait_cell_in_view(player): draw_entity_visual(portrait_cell_center(player), "player", "忍", 21, Color("#ffffff"), PTILE)
 
-\t# Message window and round map toggle from the adopted mockup.
+\t# Round map icon. Geometric lines avoid missing-glyph blank circles.
+\tdraw_circle(Vector2(73, 193), 38.0, Color("#1b2632"))
+\tdraw_arc(Vector2(73, 193), 38.0, 0.0, TAU, 48, Color("#d7bf66") if map_visible else Color("#596675"), 2.0)
+\tfor gy in range(2):
+\t\tdraw_line(Vector2(55, 181 + gy * 12), Vector2(91, 181 + gy * 12), Color("#d7bf66"), 2.0)
+\tfor gx in range(2):
+\t\tdraw_line(Vector2(67 + gx * 12, 169), Vector2(67 + gx * 12, 205), Color("#d7bf66"), 2.0)
+
 \tdraw_panel(Rect2(20, 634, 680, 108), Color("#111820"), Color("#8d7740"), 1.5)
-\tdraw_circle(Vector2(74, 688), 43.0, Color("#1b2632"))
-\tdraw_arc(Vector2(74, 688), 43.0, 0.0, TAU, 48, Color("#d7bf66"), 2.0)
-\tdraw_ui_text(Vector2(48, 696), "地図", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
-\tdraw_ui_text(Vector2(132, 671), message.left(38), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#e8d47f"))
+\tdraw_ui_text(Vector2(34, 671), message.left(44), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("#e8d47f"))
 \tvar hunger_note := "【空腹注意】" if hunger <= 20 else ""
-\tdraw_ui_text(Vector2(132, 710), "装備: %s / %s   %s" % [WEAPON_NAME, ARMOR_NAME, hunger_note], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#aeb7c2"))
+\tdraw_ui_text(Vector2(34, 710), "装備: %s / %s   %s" % [WEAPON_NAME, ARMOR_NAME, hunger_note], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("#aeb7c2"))
 
 \tdraw_mobile_controls_portrait()
 \tif inventory_menu:
@@ -143,8 +173,8 @@ controls = '''func draw_mobile_controls_portrait() -> void:
 '''
 s, n3 = re.subn(r'func draw_mobile_controls_portrait\(\) -> void:\n.*?(?=\n\nfunc draw_modal_overlay_portrait)', controls, s, count=1, flags=re.S)
 
-if (n1, n2, n3) != (1, 1, 1):
-    raise SystemExit(f'patch anchors failed: handle={n1}, draw={n2}, controls={n3}')
+if (n0, n1, n2, n3) != (1, 1, 1, 1):
+    raise SystemExit(f'patch anchors failed: helpers={n0}, handle={n1}, draw={n2}, controls={n3}')
 if s == original:
     raise SystemExit('no changes made')
 
