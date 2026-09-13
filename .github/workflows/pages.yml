@@ -58,6 +58,8 @@ jobs:
           python3 tools/apply_direction_projectile.py
           echo "[PATCH] room + corridor floor"
           python3 tools/apply_torneko_floor.py
+          echo "[PATCH] restore existing shop rules"
+          python3 tools/apply_shop_rules_restore.py
           echo "[PATCH] all patches complete"
 
       - name: Regression and Web export
