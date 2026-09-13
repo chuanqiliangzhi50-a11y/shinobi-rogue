@@ -17,6 +17,7 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -26,6 +27,7 @@ jobs:
 
       - name: Install Godot 4.7.2 and export templates
         shell: bash
+        timeout-minutes: 5
         run: |
           set -euo pipefail
           GODOT_VERSION="4.7.2-stable"
@@ -43,20 +45,34 @@ jobs:
 
       - name: Apply adopted portrait UI and gameplay patches
         shell: bash
+        timeout-minutes: 3
         run: |
           set -euo pipefail
+          echo "[PATCH] final portrait UI"
           python3 tools/apply_final_portrait_ui.py
+          echo "[PATCH] centered camera"
           python3 tools/apply_centered_portrait_camera.py
+          echo "[PATCH] character clarity"
           python3 tools/apply_character_clarity.py
+          echo "[PATCH] direction + projectile"
           python3 tools/apply_direction_projectile.py
+          echo "[PATCH] room + corridor floor"
           python3 tools/apply_torneko_floor.py
+          echo "[PATCH] all patches complete"
 
       - name: Regression and Web export
         shell: bash
+        timeout-minutes: 12
+        env:
+          SHINOBI_IMPORT_TIMEOUT: "120"
+          SHINOBI_REGRESSION_TIMEOUT: "180"
+          SHINOBI_EXPORT_TIMEOUT: "300"
         run: |
           set -euo pipefail
+          echo "[BUILD] start $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
           chmod +x BUILD_WEB_LINUX.sh
           ./BUILD_WEB_LINUX.sh
+          echo "[BUILD] script complete $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
           test -s web/index.html
           test -s web/index.js
           test -s web/index.pck
@@ -65,6 +81,7 @@ jobs:
 
       - name: Remove stale PWA cache on existing installs
         shell: bash
+        timeout-minutes: 2
         run: |
           set -euo pipefail
           cat > web/index.service.worker.js <<'JS'
