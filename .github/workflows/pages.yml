@@ -60,6 +60,8 @@ jobs:
           python3 tools/apply_torneko_floor.py
           echo "[PATCH] restore existing shop rules"
           python3 tools/apply_shop_rules_restore.py
+          echo "[PATCH] directional player + larger overlay map"
+          python3 tools/apply_directional_player_map_overlay.py
           echo "[PATCH] all patches complete"
 
       - name: Regression and Web export
