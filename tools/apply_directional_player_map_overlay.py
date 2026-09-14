@@ -146,7 +146,9 @@ sprites["down_left"] = mirror(sprites["down_right"])
 
 art_dir = Path("art")
 for key, pix in sprites.items():
-    write_png_rgba(art_dir / f"player_dir_{key}.png", w, h, pix)
+    target = art_dir / f"player_dir_{key}.png"
+    if not target.exists():
+        write_png_rgba(target, w, h, pix)
 
 if "var player_direction_art: Dictionary = {}" not in s:
     s = s.replace(
@@ -169,42 +171,45 @@ direction_const = '''const PLAYER_DIRECTION_ART_PATHS := {
 if "const PLAYER_DIRECTION_ART_PATHS" not in s:
     s = s.replace("const UI_GLYPH_CELL := 40.0\n", direction_const + "const UI_GLYPH_CELL := 40.0\n", 1)
 
-load_pattern = r'(func load_optional_entity_art\(\) -> void:\n.*?)(?=\n\nfunc draw_entity_visual)'
-m = re.search(load_pattern, s, flags=re.S)
-if not m:
-    raise SystemExit("direction art load function anchor failed")
-load_block = m.group(1).rstrip() + '''
-\tplayer_direction_art.clear()
-\tfor key in PLAYER_DIRECTION_ART_PATHS.keys():
-\t\tvar direction_path := str(PLAYER_DIRECTION_ART_PATHS[key])
-\t\tif ResourceLoader.exists(direction_path):
-\t\t\tvar direction_tex := load(direction_path) as Texture2D
-\t\t\tif direction_tex != null:
-\t\t\t\tplayer_direction_art[key] = direction_tex
-'''
-s = s[:m.start()] + load_block + s[m.end():]
+load_anchor = '''                entity_art[key] = tex
+
+
+func draw_entity_visual'''
+if load_anchor not in s:
+    raise SystemExit("direction art load anchor failed")
+s = s.replace(load_anchor, '''                entity_art[key] = tex
+    player_direction_art.clear()
+    for key in PLAYER_DIRECTION_ART_PATHS.keys():
+        var direction_path := str(PLAYER_DIRECTION_ART_PATHS[key])
+        if ResourceLoader.exists(direction_path):
+            var direction_tex := load(direction_path) as Texture2D
+            if direction_tex != null:
+                player_direction_art[key] = direction_tex
+
+
+func draw_entity_visual''', 1)
 
 direction_funcs = '''func player_direction_key() -> String:
-\tvar dx: int = clampi(facing_dir.x, -1, 1)
-\tvar dy: int = clampi(facing_dir.y, -1, 1)
-\tif dx < 0 and dy < 0: return "up_left"
-\tif dx == 0 and dy < 0: return "up"
-\tif dx > 0 and dy < 0: return "up_right"
-\tif dx < 0 and dy == 0: return "left"
-\tif dx > 0 and dy == 0: return "right"
-\tif dx < 0 and dy > 0: return "down_left"
-\tif dx > 0 and dy > 0: return "down_right"
-\treturn "down"
+    var dx: int = clampi(facing_dir.x, -1, 1)
+    var dy: int = clampi(facing_dir.y, -1, 1)
+    if dx < 0 and dy < 0: return "up_left"
+    if dx == 0 and dy < 0: return "up"
+    if dx > 0 and dy < 0: return "up_right"
+    if dx < 0 and dy == 0: return "left"
+    if dx > 0 and dy == 0: return "right"
+    if dx < 0 and dy > 0: return "down_left"
+    if dx > 0 and dy > 0: return "down_right"
+    return "down"
 
 
 func draw_player_facing_visual(center: Vector2, tile_size: float) -> void:
-\tvar key := player_direction_key()
-\tif player_direction_art.has(key):
-\t\tvar tex: Texture2D = player_direction_art[key]
-\t\tvar size: float = maxf(12.0, tile_size - 2.0)
-\t\tdraw_texture_rect(tex, Rect2(center - Vector2(size, size) * 0.5, Vector2(size, size)), false)
-\telse:
-\t\tdraw_entity_visual(center, "player", "忍", 21, Color("#ffffff"), tile_size)
+    var key := player_direction_key()
+    if player_direction_art.has(key):
+        var tex: Texture2D = player_direction_art[key]
+        var size: float = maxf(12.0, tile_size - 2.0)
+        draw_texture_rect(tex, Rect2(center - Vector2(size, size) * 0.5, Vector2(size, size)), false)
+    else:
+        draw_entity_visual(center, "player", "忍", 21, Color("#ffffff"), tile_size)
 '''
 s, n = re.subn(
     r'func draw_player_facing_visual\(center: Vector2, tile_size: float\) -> void:\n.*?(?=\n\nconst UI_GLYPH_MAP)',
@@ -214,36 +219,36 @@ if n != 1:
     raise SystemExit(f"direction player function replace failed: {n}")
 
 map_func = '''func draw_explored_minimap_portrait() -> void:
-\tif not validate_grid(explored): return
-\tvar cell: float = 9.0
-\tvar map_size := Vector2(float(MAP_W) * cell, float(MAP_H) * cell)
-\tvar origin := Vector2(690.0 - map_size.x, 214.0)
-\tvar frame := Rect2(origin - Vector2(8, 8), map_size + Vector2(16, 16))
-\tdraw_rect(frame, Color(0.02, 0.03, 0.04, 0.34), true)
-\tdraw_rect(frame, Color(0.82, 0.72, 0.36, 0.60), false, 1.5)
+    if not validate_grid(explored): return
+    var cell: float = 9.0
+    var map_size := Vector2(float(MAP_W) * cell, float(MAP_H) * cell)
+    var origin := Vector2(690.0 - map_size.x, 214.0)
+    var frame := Rect2(origin - Vector2(8, 8), map_size + Vector2(16, 16))
+    draw_rect(frame, Color(0.02, 0.03, 0.04, 0.34), true)
+    draw_rect(frame, Color(0.82, 0.72, 0.36, 0.60), false, 1.5)
 
-\tfor y in range(MAP_H):
-\t\tfor x in range(MAP_W):
-\t\t\tif not bool(explored[y][x]) or str(map[y][x]) == "#":
-\t\t\t\tcontinue
-\t\t\tvar col := Color(0.55, 0.62, 0.70, 0.54)
-\t\t\tif str(map[y][x]) == ">":
-\t\t\t\tcol = Color(0.95, 0.78, 0.28, 0.90)
-\t\t\tdraw_rect(Rect2(origin + Vector2(float(x) * cell + 1.0, float(y) * cell + 1.0), Vector2(cell - 2.0, cell - 2.0)), col, true)
+    for y in range(MAP_H):
+        for x in range(MAP_W):
+            if not bool(explored[y][x]) or str(map[y][x]) == "#":
+                continue
+            var col := Color(0.55, 0.62, 0.70, 0.54)
+            if str(map[y][x]) == ">":
+                col = Color(0.95, 0.78, 0.28, 0.90)
+            draw_rect(Rect2(origin + Vector2(float(x) * cell + 1.0, float(y) * cell + 1.0), Vector2(cell - 2.0, cell - 2.0)), col, true)
 
-\tfor raw_enemy in enemies:
-\t\tvar enemy: Dictionary = raw_enemy
-\t\tvar enemy_pos: Vector2i = enemy["pos"]
-\t\tif is_visible_cell(enemy_pos):
-\t\t\tdraw_circle(origin + Vector2((float(enemy_pos.x) + 0.5) * cell, (float(enemy_pos.y) + 0.5) * cell), 3.4, Color(0.94, 0.32, 0.36, 0.95))
+    for raw_enemy in enemies:
+        var enemy: Dictionary = raw_enemy
+        var enemy_pos: Vector2i = enemy["pos"]
+        if is_visible_cell(enemy_pos):
+            draw_circle(origin + Vector2((float(enemy_pos.x) + 0.5) * cell, (float(enemy_pos.y) + 0.5) * cell), 3.4, Color(0.94, 0.32, 0.36, 0.95))
 
-\tfor raw_item in items:
-\t\tvar item: Dictionary = raw_item
-\t\tvar item_pos: Vector2i = item["pos"]
-\t\tif is_visible_cell(item_pos):
-\t\t\tdraw_circle(origin + Vector2((float(item_pos.x) + 0.5) * cell, (float(item_pos.y) + 0.5) * cell), 2.4, Color(0.45, 0.86, 0.58, 0.92))
+    for raw_item in items:
+        var item: Dictionary = raw_item
+        var item_pos: Vector2i = item["pos"]
+        if is_visible_cell(item_pos):
+            draw_circle(origin + Vector2((float(item_pos.x) + 0.5) * cell, (float(item_pos.y) + 0.5) * cell), 2.4, Color(0.45, 0.86, 0.58, 0.92))
 
-\tdraw_circle(origin + Vector2((float(player.x) + 0.5) * cell, (float(player.y) + 0.5) * cell), 4.2, Color(0.45, 0.82, 1.0, 1.0))
+    draw_circle(origin + Vector2((float(player.x) + 0.5) * cell, (float(player.y) + 0.5) * cell), 4.2, Color(0.45, 0.82, 1.0, 1.0))
 '''
 s, n = re.subn(
     r'func draw_explored_minimap_portrait\(\) -> void:\n.*?(?=\n\nfunc generate_floor\(\) -> void:)',
