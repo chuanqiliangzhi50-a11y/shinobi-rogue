@@ -53,3 +53,7 @@ for needle in required:
     if needle not in s:
         raise SystemExit(f'title verification failed: {needle}')
 print('TITLE_SCREEN_PATCH PASS')
+
+# Keep the iPhone confirmation UI patch in the same build stage so Pages and
+# future Web exports cannot drift apart.
+exec(Path('tools/apply_vertical_confirm_modal.py').read_text(encoding='utf-8'), {})
