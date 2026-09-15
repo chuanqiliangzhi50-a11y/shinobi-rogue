@@ -60,3 +60,4 @@ exec(Path('tools/apply_vertical_confirm_modal.py').read_text(encoding='utf-8'), 
 exec(Path('tools/apply_hold_dash.py').read_text(encoding='utf-8'), {})
 exec(Path('tools/apply_dash_run_effect.py').read_text(encoding='utf-8'), {})
 exec(Path('tools/apply_reference_gameplay_skin.py').read_text(encoding='utf-8'), {})
+exec(Path('tools/apply_reference_gameplay_skin_typefix.py').read_text(encoding='utf-8'), {})
