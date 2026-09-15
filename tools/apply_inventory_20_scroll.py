@@ -52,34 +52,16 @@ repl='''func add_inventory_item(name: String, identified: bool = false, count: i
 if needle not in s: raise SystemExit("add inventory capacity anchor failed")
 s=s.replace(needle,repl,1)
 
-start=s.find("func pickup(consume_turn: bool = true) -> void:")
-end=s.find("\n\nfunc is_projectile_name",start)
-if start<0 or end<0: raise SystemExit("pickup anchors failed")
-pickup='''func pickup(consume_turn: bool = true) -> void:
-\tvar found = -1
-\tfor i in range(items.size()):
-\t\tif items[i]["pos"] == player:
-\t\t\tfound = i
-\t\t\tbreak
-\tif found < 0:
-\t\tmessage = "ここには何もない。"
-\t\treturn
-\tvar item: Dictionary = items[found]
-\tvar item_name := str(item.get("name", ""))
-\tif not bool(item.get("shop", false)) and not inventory_has_space_for(item_name):
+# Keep floor item in place when inventory is full.
+needle='''\tvar item: Dictionary = items[found]
+\titems.remove_at(found)'''
+repl='''\tvar item: Dictionary = items[found]
+\tif not bool(item.get("shop", false)) and not inventory_has_space_for(str(item.get("name", ""))):
 \t\tmessage = "道具は20個まで。これ以上持てない。"
 \t\treturn
-\titems.remove_at(found)
-\tif bool(item.get("shop", false)):
-\t\tunpaid_items.append(item)
-\t\tmessage = "%sを手に取った。未精算。" % item_name
-\telse:
-\t\tvar picked_count := max(1, int(item.get("count", 1)))
-\t\tadd_inventory_item(item_name, false, picked_count)
-\t\tmessage = "%s×%dを拾った。" % [item_name, picked_count] if picked_count > 1 else "%sを拾った。" % item_name
-\tif consume_turn:
-\t\tend_turn()'''
-s=s[:start]+pickup+s[end:]
+\titems.remove_at(found)'''
+if needle not in s: raise SystemExit("pickup capacity anchor failed")
+s=s.replace(needle,repl,1)
 
 s=s.replace('\tinventory_selected = clamp(inventory_selected, 0, max(0, inventory_entry_count() - 1))\n\tmessage = "道具を確認する。"','\tinventory_selected = clamp(inventory_selected, 0, max(0, inventory_entry_count() - 1))\n\tinventory_sync_scroll()\n\tinventory_scroll_drag_y = 0.0\n\tmessage = "道具を確認する。"',1)
 s=s.replace('\telif event.keycode == KEY_D:\n\t\tinventory_identify_selected()\n\tqueue_redraw()','\telif event.keycode == KEY_D:\n\t\tinventory_identify_selected()\n\tinventory_sync_scroll()\n\tqueue_redraw()',1)
@@ -152,10 +134,6 @@ swipe='''\tif inventory_menu and event is InputEventScreenDrag:
 \t\treturn
 '''
 s=s[:insert_at]+swipe+s[insert_at:]
-
-needle='\treturn out\n\n\nfunc inventory_entry_count() -> int:'
-if needle not in s: raise SystemExit("sanitize cap anchor failed")
-s=s.replace(needle,'\treturn out.slice(0, INVENTORY_CAPACITY)\n\n\nfunc inventory_entry_count() -> int:',1)
 
 p.write_text(s,encoding="utf-8")
 print("INVENTORY_20_SCROLL_PATCH PASS")
