@@ -54,7 +54,8 @@ for needle in required:
         raise SystemExit(f'title verification failed: {needle}')
 print('TITLE_SCREEN_PATCH PASS')
 
-# Keep post-title iPhone behavior patches in the same build stage so Pages and
-# future Web exports cannot drift apart.
+# Keep post-title iPhone behavior/presentation patches in the same build stage so
+# Pages and future Web exports cannot drift apart.
 exec(Path('tools/apply_vertical_confirm_modal.py').read_text(encoding='utf-8'), {})
 exec(Path('tools/apply_hold_dash.py').read_text(encoding='utf-8'), {})
+exec(Path('tools/apply_dash_run_effect.py').read_text(encoding='utf-8'), {})
