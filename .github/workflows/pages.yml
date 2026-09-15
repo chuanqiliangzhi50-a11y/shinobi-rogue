@@ -43,6 +43,17 @@ jobs:
           mv /tmp/godot-templates/templates "$HOME/.local/share/godot/export_templates/4.7.2.stable"
           godot --version
 
+      - name: Reconstruct title screen asset
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          cat art/title_screen.b64.* | base64 --decode > art/title_screen.jpg
+          test -s art/title_screen.jpg
+          test "$(wc -c < art/title_screen.jpg)" -eq 43129
+          echo "f22a5daf2f805e9c31d9ad7865db516835f83d4cebcb9025db0affccc29697d4  art/title_screen.jpg" | sha256sum -c -
+          echo "[TITLE] reconstructed and verified"
+
       - name: Apply adopted portrait UI and gameplay patches
         shell: bash
         timeout-minutes: 3
@@ -62,6 +73,8 @@ jobs:
           python3 tools/apply_shop_rules_restore.py
           echo "[PATCH] directional player + larger overlay map"
           python3 tools/apply_directional_player_map_overlay.py
+          echo "[PATCH] title screen"
+          python3 tools/apply_title_screen.py
           echo "[PATCH] all patches complete"
 
       - name: Regression and Web export
