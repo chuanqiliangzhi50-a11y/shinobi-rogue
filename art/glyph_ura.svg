@@ -1,20 +1,4 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
-  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg xmlns:xlink="http://www.w3.org/1999/xlink" width="28.8pt" height="28.8pt" viewBox="0 0 28.8 28.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
- <metadata>
-  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-   <cc:Work>
-    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-15T00:00:00</dc:date>
-    <dc:format>image/svg+xml</dc:format>
-   </cc:Work>
-  </rdf:RDF>
- </metadata>
- <defs>
-  <style type="text/css">*{stroke-linejoin:round;stroke-linecap:butt}</style>
- </defs>
- <g transform="translate(0 28.8) scale(1 -1)">
-  <path d="M 3.188 22.969 L 12.094 22.969 L 12.094 25.156 L 15.609 25.156 L 15.609 22.969 L 25.594 22.969 L 25.594 20.5 L 15.609 20.5 L 15.609 18.625 L 23.688 18.625 L 23.688 10.625 L 16.75 10.625 Q 17.766 9.406 19.188 8.344 Q 22.406 10.047 24.125 11.531 L 26.344 9.375 Q 24.344 7.906 21.406 6.562 Q 23.938 5.156 27.062 4.469 Q 26.094 3.5 25.344 1.844 Q 20.469 3.25 16.922 6.062 L 16.922 3.844 Q 12.109 2.844 5.188 1.812 L 4.5 4.656 L 8.281 5.125 L 8.281 10.625 L 4.781 10.625 L 4.781 18.625 L 12.094 18.625 L 12.094 20.5 L 3.188 20.5 Z M 8.078 16.188 L 8.078 13.094 L 20.344 13.094 L 20.344 16.188 Z M 11.625 10.625 L 11.625 5.625 L 15.547 6.281 Q 13.422 8.125 12.156 10.625 Z" fill="#ffffff"/>
- </g>
-</svg>
+<g transform="translate(-0.6 22.903125) scale(0.3 -0.3)" fill="#ffffff">
+<defs><path id="ura" d="M 4691 2381 L 3206 2381 L 3206 2842 L 4691 2842 L 4691 2381 z M 4691 1581 L 3206 1581 L 3206 2054 L 4691 2054 L 4691 1581 z M 4691 781 L 3206 781 L 3206 1254 L 4691 1254 L 4691 781 z M 2758 2381 L 1280 2381 L 1280 2842 L 2758 2842 L 2758 2381 z M 2758 1581 L 1280 1581 L 1280 2054 L 2758 2054 L 2758 1581 z M 2758 781 L 1280 781 L 1280 1254 L 2758 1254 L 2758 781 z M 339 3309 L 339 3462 L 2950 3462 L 2950 3885 L 851 3885 L 851 4243 L 2950 4243 L 2950 4646 L 538 4646 L 538 5050 L 2950 5050 L 2950 5408 L 3430 5408 L 3430 5050 L 5894 5050 L 5894 4646 L 3430 4646 L 3430 4243 L 5568 4243 L 5568 3885 L 3430 3885 L 3430 3462 L 6080 3462 L 6080 3059 L 3232 3059 C 3034 2861 2790 2669 2522 2490 L 2522 -589 L 2042 -589 L 2042 2214 C 1581 1933 1069 1709 557 1542 C 493 1658 365 1830 262 1920 C 1158 2189 2035 2605 2630 3059 L 339 3059 L 339 3309 z M 3283 2470 C 3469 2150 3686 1875 3942 1645 C 4378 1856 4890 2170 5229 2426 L 5600 2112 C 5197 1850 4698 1574 4262 1376 C 4768 1005 5389 755 6106 614 C 6010 512 5882 320 5824 186 C 4422 506 3405 1203 2829 2291 L 3283 2470 z" transform="scale(0.015625)"/></defs><use xlink:href="#ura"/></g></svg>
