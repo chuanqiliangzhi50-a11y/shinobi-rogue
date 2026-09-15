@@ -9,15 +9,14 @@ if "DASH_RUN_EFFECT_PATCH_APPLIED" in s:
     print("DASH_RUN_EFFECT_PATCH PASS (already applied)")
     raise SystemExit(0)
 
-# Replace only the existing player draw function. Do not consume any following
-# gameplay/helper functions.
-pattern = r'''func draw_player_facing_visual\(center: Vector2, tile_size: float\) -> void:\n.*?(?=\n\nfunc )'''
+# The directional player function is immediately followed by UI_GLYPH_MAP.
+# Stop at that exact anchor so no constants/helpers are consumed.
+pattern = r'''func draw_player_facing_visual\(center: Vector2, tile_size: float\) -> void:\n.*?(?=\n\nconst UI_GLYPH_MAP := \{)'''
 
 replacement = '''func draw_dash_run_effect(center: Vector2, tile_size: float, dir: Vector2) -> void: # DASH_RUN_EFFECT_PATCH_APPLIED
 \tvar now := float(Time.get_ticks_msec()) / 1000.0
 \tvar side := Vector2(-dir.y, dir.x)
 \tvar behind := center - dir * (tile_size * 0.34)
-\t# Small dust puffs stay behind the ninja and fade quickly.
 \tfor i in range(3):
 \t\tvar phase := fmod(now * 5.5 + float(i) * 0.31, 1.0)
 \t\tvar dust_pos := behind - dir * (phase * 11.0) + side * (float(i - 1) * 4.0)
@@ -35,7 +34,6 @@ func draw_player_facing_visual(center: Vector2, tile_size: float) -> void:
 \tvar draw_center := center
 \tif running:
 \t\tvar now := float(Time.get_ticks_msec()) / 1000.0
-\t\t# Slight forward lean/bob without changing collision or movement timing.
 \t\tdraw_center += dir * 2.2
 \t\tdraw_center.y += sin(now * 28.0) * 1.8
 \t\tdraw_dash_run_effect(center, tile_size, dir)
@@ -43,7 +41,6 @@ func draw_player_facing_visual(center: Vector2, tile_size: float) -> void:
 \t\tvar tex: Texture2D = player_direction_art[key]
 \t\tvar size: float = maxf(12.0, tile_size - 2.0)
 \t\tif running:
-\t\t\t# Two short afterimages make high-speed movement readable.
 \t\t\tfor ghost_i in range(2, 0, -1):
 \t\t\t\tvar ghost_center := draw_center - dir * (float(ghost_i) * 8.0)
 \t\t\t\tvar ghost_alpha := 0.10 + float(2 - ghost_i) * 0.07
@@ -63,6 +60,7 @@ required = [
     "draw_dash_run_effect(center, tile_size, dir)",
     "sin(now * 28.0) * 1.8",
     "ghost_center := draw_center - dir",
+    "const UI_GLYPH_MAP := {",
     "func apply_permanent_stats() -> void:",
     "func draw_ui_text(",
 ]
