@@ -43,22 +43,15 @@ if anchor not in s:
 s = s.replace(anchor, anchor + '\tif title_screen_active and title_screen_texture != null:\n\t\tdraw_texture_rect(title_screen_texture, Rect2(0, 0, CONTENT_W, CONTENT_H), false)\n\t\treturn\n', 1)
 
 p.write_text(s, encoding='utf-8')
-required = [
-    'TITLE_SCREEN_PATCH_APPLIED',
-    'title_screen_active: bool = true',
-    'title_screen_texture = load(TITLE_SCREEN_PATH)',
-    'draw_texture_rect(title_screen_texture, Rect2(0, 0, CONTENT_W, CONTENT_H), false)',
-]
+required = ['TITLE_SCREEN_PATCH_APPLIED','title_screen_active: bool = true','title_screen_texture = load(TITLE_SCREEN_PATH)','draw_texture_rect(title_screen_texture, Rect2(0, 0, CONTENT_W, CONTENT_H), false)']
 for needle in required:
-    if needle not in s:
-        raise SystemExit(f'title verification failed: {needle}')
+    if needle not in s: raise SystemExit(f'title verification failed: {needle}')
 print('TITLE_SCREEN_PATCH PASS')
 
-# Keep post-title iPhone behavior/presentation patches in the same build stage so
-# Pages and future Web exports cannot drift apart.
 exec(Path('tools/apply_vertical_confirm_modal.py').read_text(encoding='utf-8'), {})
 exec(Path('tools/apply_hold_dash.py').read_text(encoding='utf-8'), {})
 exec(Path('tools/apply_dash_run_effect.py').read_text(encoding='utf-8'), {})
 exec(Path('tools/apply_reference_gameplay_skin.py').read_text(encoding='utf-8'), {})
 exec(Path('tools/apply_reference_gameplay_skin_typefix.py').read_text(encoding='utf-8'), {})
 exec(Path('tools/apply_extra_projectile_glyphs.py').read_text(encoding='utf-8'), {})
+exec(Path('tools/apply_inventory_20_scroll.py').read_text(encoding='utf-8'), {})
