@@ -9,8 +9,9 @@ if "DASH_RUN_EFFECT_PATCH_APPLIED" in s:
     print("DASH_RUN_EFFECT_PATCH PASS (already applied)")
     raise SystemExit(0)
 
-pattern = r'''func draw_player_facing_visual\(center: Vector2, tile_size: float\) -> void:
-.*?(?=\n\nfunc draw_explored_minimap_portrait\(\) -> void:)'''
+# Replace only the existing player draw function. Do not consume any following
+# gameplay/helper functions.
+pattern = r'''func draw_player_facing_visual\(center: Vector2, tile_size: float\) -> void:\n.*?(?=\n\nfunc )'''
 
 replacement = '''func draw_dash_run_effect(center: Vector2, tile_size: float, dir: Vector2) -> void: # DASH_RUN_EFFECT_PATCH_APPLIED
 \tvar now := float(Time.get_ticks_msec()) / 1000.0
@@ -62,6 +63,8 @@ required = [
     "draw_dash_run_effect(center, tile_size, dir)",
     "sin(now * 28.0) * 1.8",
     "ghost_center := draw_center - dir",
+    "func apply_permanent_stats() -> void:",
+    "func draw_ui_text(",
 ]
 for needle in required:
     if needle not in s:
