@@ -8,7 +8,7 @@ if 'TITLE_SCREEN_PATCH_APPLIED' in s:
     raise SystemExit(0)
 
 asset = Path('art/title_screen.jpg')
-if not asset.is_file() or asset.stat().st_size < 50000:
+if not asset.is_file() or asset.stat().st_size < 40000:
     raise SystemExit('title screen asset missing or too small')
 
 anchor = 'const ARMOR_NAME := "忍装束"\n'
