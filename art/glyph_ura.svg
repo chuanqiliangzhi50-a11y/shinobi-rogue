@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="28.8pt" height="28.8pt" viewBox="0 0 28.8 28.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-09-15T00:00:00</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin:round;stroke-linecap:butt}</style>
+ </defs>
+ <g transform="translate(0 28.8) scale(1 -1)">
+  <path d="M 3.188 22.969 L 12.094 22.969 L 12.094 25.156 L 15.609 25.156 L 15.609 22.969 L 25.594 22.969 L 25.594 20.5 L 15.609 20.5 L 15.609 18.625 L 23.688 18.625 L 23.688 10.625 L 16.75 10.625 Q 17.766 9.406 19.188 8.344 Q 22.406 10.047 24.125 11.531 L 26.344 9.375 Q 24.344 7.906 21.406 6.562 Q 23.938 5.156 27.062 4.469 Q 26.094 3.5 25.344 1.844 Q 20.469 3.25 16.922 6.062 L 16.922 3.844 Q 12.109 2.844 5.188 1.812 L 4.5 4.656 L 8.281 5.125 L 8.281 10.625 L 4.781 10.625 L 4.781 18.625 L 12.094 18.625 L 12.094 20.5 L 3.188 20.5 Z M 8.078 16.188 L 8.078 13.094 L 20.344 13.094 L 20.344 16.188 Z M 11.625 10.625 L 11.625 5.625 L 15.547 6.281 Q 13.422 8.125 12.156 10.625 Z" fill="#ffffff"/>
+ </g>
+</svg>
