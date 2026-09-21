@@ -235,3 +235,5 @@ if s == original:
 
 p.write_text(s, encoding='utf-8')
 print('STEP67_ADOPTED_FULL_SCREEN PASS')
+
+exec(Path('tools/apply_step68_adopted_dungeon_ui_refinement.py').read_text(encoding='utf-8'), {})
