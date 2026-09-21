@@ -76,3 +76,4 @@ if s == original:
 
 p.write_text(s, encoding='utf-8')
 print('STEP69_CLOSE_DUNGEON_COMPOSITION PASS')
+exec(Path('tools/apply_step70_reference_map_presentation.py').read_text(encoding='utf-8'), {})
