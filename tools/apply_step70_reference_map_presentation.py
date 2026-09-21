@@ -51,3 +51,4 @@ if s == original:
 
 p.write_text(s,encoding='utf-8')
 print('STEP70_REFERENCE_MAP_PRESENTATION PASS')
+exec(Path('tools/apply_step71_torneko_melee_attack_motion.py').read_text(encoding='utf-8'), {})
