@@ -129,3 +129,4 @@ if s == original:
 
 p.write_text(s, encoding='utf-8')
 print('STEP68_ADOPTED_DUNGEON_UI_REFINEMENT PASS')
+exec(Path('tools/apply_step69_close_dungeon_composition.py').read_text(encoding='utf-8'), {})
