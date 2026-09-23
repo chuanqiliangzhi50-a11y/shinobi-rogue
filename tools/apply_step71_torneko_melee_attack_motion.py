@@ -153,3 +153,4 @@ if s == original:
 p.write_text(s, encoding='utf-8')
 print('STEP71_TORNEKO_MELEE_ATTACK_MOTION PASS')
 exec(Path('tools/apply_step72_sword_swing_damage_blink.py').read_text(encoding='utf-8'), {})
+exec(Path('tools/apply_step73_katana_swing_damage_blink.py').read_text(encoding='utf-8'), {})
