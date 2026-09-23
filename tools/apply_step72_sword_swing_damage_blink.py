@@ -229,3 +229,4 @@ if s==original:
 
 p.write_text(s,encoding='utf-8')
 print('STEP72_SWORD_SWING_DAMAGE_BLINK PASS')
+exec(Path('tools/apply_step73_ninjutsu_charge_pose.py').read_text(encoding='utf-8'), {})
