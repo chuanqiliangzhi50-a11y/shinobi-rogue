@@ -93,3 +93,4 @@ if s==original:
 
 p.write_text(s,encoding='utf-8')
 print('STEP73_NINJUTSU_CHARGE_POSE PASS')
+exec(Path('tools/apply_step74_enemy_attack_motion.py').read_text(encoding='utf-8'), {})
