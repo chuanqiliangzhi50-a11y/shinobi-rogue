@@ -123,3 +123,4 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP74_ENEMY_ATTACK_MOTION PASS")
+exec(Path("tools/apply_step75_level_and_full_heal_growth.py").read_text(encoding="utf-8"), {})
