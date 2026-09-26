@@ -101,16 +101,12 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          # Godot exports several large files under the fixed "index" name. GitHub
-          # Pages may cache those files for ten minutes, so an HTML update could
-          # otherwise load a mixture of old and new engine/package files.
+          # Keep the unchanged engine under its stable name so iPhone Safari can
+          # reuse the already compiled WebAssembly. Only the game package changes
+          # between releases, so give that file a unique name.
           BUILD_ID="shinobi-${GITHUB_SHA:0:12}"
           export BUILD_ID
-          for suffix in js pck wasm audio.worklet.js audio.position.worklet.js side.wasm; do
-            if [[ -f "web/index.${suffix}" ]]; then
-              mv "web/index.${suffix}" "web/${BUILD_ID}.${suffix}"
-            fi
-          done
+          mv web/index.pck "web/${BUILD_ID}.pck"
 
           cat > web/index.service.worker.js <<'JS'
           self.addEventListener('install', () => self.skipWaiting());
@@ -132,10 +128,12 @@ jobs:
           build_id = os.environ['BUILD_ID']
           p = Path('web/index.html')
           s = p.read_text(encoding='utf-8')
-          s = s.replace('src="index.js"', f'src="{build_id}.js"')
-          s = s.replace('"executable":"index"', f'"executable":"{build_id}"')
           s = s.replace('"index.pck":', f'"{build_id}.pck":')
-          s = s.replace('"index.wasm":', f'"{build_id}.wasm":')
+          s = s.replace(
+              '"executable":"index",',
+              f'"executable":"index","mainPack":"{build_id}.pck",',
+              1,
+          )
 
           cache_meta = '''<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
           <meta http-equiv="Pragma" content="no-cache">
@@ -162,17 +160,14 @@ jobs:
           p.write_text(s, encoding='utf-8')
           PY
 
-          test -s "web/${BUILD_ID}.js"
           test -s "web/${BUILD_ID}.pck"
-          test -s "web/${BUILD_ID}.wasm"
-          grep -Fq "\"executable\":\"${BUILD_ID}\"" web/index.html
-          grep -Fq "src=\"${BUILD_ID}.js\"" web/index.html
+          test -s web/index.js
+          test -s web/index.wasm
+          grep -Fq '"executable":"index"' web/index.html
+          grep -Fq "\"mainPack\":\"${BUILD_ID}.pck\"" web/index.html
+          grep -Fq 'src="index.js"' web/index.html
           grep -Fq '"canvasResizePolicy":0' web/index.html
           grep -Fq 'width="720" height="1100"' web/index.html
-          if grep -Fq 'src="index.js"' web/index.html; then
-            echo "Fixed-name JavaScript reference remains" >&2
-            exit 1
-          fi
           touch web/.nojekyll
 
       - name: Configure Pages
