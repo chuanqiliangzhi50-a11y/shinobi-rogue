@@ -39,6 +39,16 @@ if ! timeout --foreground "${IMPORT_TIMEOUT}s" "$GODOT_BIN" --headless --editor 
 fi
 echo "[PASS] $(stamp) Import complete."
 
+echo "[1.5/3] $(stamp) Optimizing mobile Web textures..."
+python3 tools/optimize_mobile_web_imports.py
+if ! timeout --foreground "${IMPORT_TIMEOUT}s" "$GODOT_BIN" --headless --editor --path . --import; then
+  rc=$?
+  echo "[ERROR] $(stamp) Optimized reimport failed or timed out after ${IMPORT_TIMEOUT}s (rc=${rc})." >&2
+  diag
+  exit 1
+fi
+echo "[PASS] $(stamp) Mobile Web textures optimized."
+
 echo "[2/3] $(stamp) Running regression..."
 rm -f web_regression.log
 "$GODOT_BIN" --headless --path . -- --shinobi-regression > >(tee web_regression.log) 2>&1 &
