@@ -60,7 +60,11 @@ glyph_paths = '''const STEP76_EXTRA_GLYPH_PATHS := {
 \t"練": "res://art/step76_glyphs/u7df4.svg",
 \t"　": "res://art/step76_glyphs/u3000.svg",
 \t"●": "res://art/step76_glyphs/u25cf.svg",
-\t"駆": "res://art/step76_glyphs/u99c6.svg"
+\t"駆": "res://art/step76_glyphs/u99c6.svg",
+\t"込": "res://art/step76_glyphs/u8fbc.svg",
+\t"前": "res://art/step76_glyphs/u524d.svg",
+\t"ロ": "res://art/step76_glyphs/u30ed.svg",
+\t"ル": "res://art/step76_glyphs/u30eb.svg"
 }
 '''
 glyph_anchor = 'const WAREHOUSE_CAPACITY := 50\n'
@@ -425,4 +429,4 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP76_SHINOBI_VILLAGE PASS")
-
+exec(Path("tools/apply_step77_village_carry_and_warehouse_scroll.py").read_text(encoding="utf-8"), {})
