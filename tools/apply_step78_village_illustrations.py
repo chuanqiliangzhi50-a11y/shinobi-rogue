@@ -109,3 +109,4 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP78_VILLAGE_ILLUSTRATIONS PASS")
+exec(Path("tools/apply_step79_village_bottom_choices.py").read_text(encoding="utf-8"), {})
