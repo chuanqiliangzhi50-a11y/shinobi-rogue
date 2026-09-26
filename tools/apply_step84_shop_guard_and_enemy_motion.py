@@ -378,3 +378,5 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP84_SHOP_GUARD_ENEMY_MOTION PASS")
+
+exec(Path("tools/apply_step85_torneko_map_spawn_warehouse.py").read_text(encoding="utf-8"), {})
