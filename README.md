@@ -29,6 +29,14 @@ Codemagic clean-checkout regression fix release. Game rules/save schema are unch
 
 # 忍道 - SHINOBI ROGUE Ver.1.0.43 FINAL DEVICE RC
 
+## Ver.1.0.54 正式武器・防具統合
+
+- 正式デザイン原本に沿った武器11種、防具8種を登録。
+- 破軍槍は前方1〜3マスを貫通し、最大3マス押し戻す。
+- 武器合成で固有効果を上限なく継承。ベース武器の外観は維持。
+- 装備詳細で固有効果と継承効果を分離表示。
+- 合成状態を冒険セーブと里の恒久セーブへ保存。
+
 App Storeネイティブ化直前の最終iPhoneスモークテスト候補版。
 
 - 100階ローグライク

@@ -43,7 +43,7 @@ if f'const VERSION := "{VERSION}"' not in s: issues.append('Main.gd version mism
 if f'config/version="{VERSION}"' not in proj: issues.append('project.godot version mismatch')
 if f'application/short_version="{VERSION}"' not in exp: issues.append('iOS short version mismatch')
 if 'application/version="54"' not in exp: issues.append('iOS build version mismatch')
-if 'const RUN_SAVE_VERSION := 8' not in s: issues.append('save schema is not v8')
+if 'const RUN_SAVE_VERSION := 9' not in s: issues.append('save schema is not v9')
 
 required_funcs = [
  'generate_floor','carve_safe_path','has_path_between','spawn_enemy','spawn_boss','generate_shop',
@@ -55,7 +55,7 @@ required_funcs = [
 for fn in required_funcs:
     if fn not in funcs: issues.append('missing function: '+fn)
 
-for field in ['stairs_pos','clone_active','clone_pos','clone_steps_left','merchant_type','last_ad_checkpoint_floor','inventory_items']:
+for field in ['stairs_pos','clone_active','clone_pos','clone_steps_left','merchant_type','last_ad_checkpoint_floor','inventory_items','weapon_fusion_states']:
     if f'"{field}":' not in s: issues.append('missing save field: '+field)
 
 for ref in re.findall(r'"res://([^"\n]+)"', proj + '\n' + (ROOT/'Main.tscn').read_text(encoding='utf-8')):
@@ -129,7 +129,7 @@ report={
  'status': 'PASS' if not issues else 'FAIL',
  'functions': len(funcs),
  'unique_functions': len(set(funcs)),
- 'save_schema': 8,
+ 'save_schema': 9,
  'monte_carlo_floor_generations': N,
  'monte_carlo_min_safe_path_cells': min_safe,
  'issues': issues,

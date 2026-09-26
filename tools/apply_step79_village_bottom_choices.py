@@ -184,3 +184,4 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP79_VILLAGE_BOTTOM_CHOICES PASS")
+exec(Path("tools/apply_step80_equipment_arsenal.py").read_text(encoding="utf-8"), {})
