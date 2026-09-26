@@ -271,3 +271,5 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP82_BOSS_DROPS_ENEMY_ART PASS")
+
+exec(Path("tools/apply_step83_village_trade_equipment_bonus.py").read_text(encoding="utf-8"), {})
