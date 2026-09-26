@@ -19,6 +19,8 @@ portrait_sources = [
     root / "art/village_blacksmith.jpg",
     root / "art/village_merchant.jpg",
     root / "art/village_warehouse.jpg",
+    root / "art/enemy_roster_v2.png",
+    root / "art/boss_roster_v2.png",
 ]
 portrait_count = 0
 for source in portrait_sources:

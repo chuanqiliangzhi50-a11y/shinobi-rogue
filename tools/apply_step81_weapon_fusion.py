@@ -629,3 +629,4 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP81_WEAPON_FUSION PASS")
+exec(Path("tools/apply_step82_boss_drops_enemy_art.py").read_text(encoding="utf-8"), {})
