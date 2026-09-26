@@ -250,4 +250,4 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP77_VILLAGE_CARRY_SCROLL PASS")
-
+exec(Path("tools/apply_step78_village_illustrations.py").read_text(encoding="utf-8"), {})
