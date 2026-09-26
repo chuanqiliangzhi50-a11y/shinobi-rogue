@@ -120,7 +120,7 @@ input_anchor = '''func _input(event: InputEvent) -> void:
 \tif inventory_menu and event is InputEventScreenDrag:'''
 input_new = '''func _input(event: InputEvent) -> void:
 \tif in_village and village_menu == "warehouse" and event is InputEventScreenTouch:
-\t\tvar warehouse_touch_pos := event.position - content_offset()
+\t\tvar warehouse_touch_pos: Vector2 = event.position - content_offset()
 \t\tif event.pressed:
 \t\t\twarehouse_touch_pending = -1
 \t\t\twarehouse_touch_dragged = false
@@ -250,3 +250,4 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP77_VILLAGE_CARRY_SCROLL PASS")
+
