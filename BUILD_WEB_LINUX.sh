@@ -31,7 +31,7 @@ echo "[INFO] $(stamp) Godot: $($GODOT_BIN --version)"
 echo "[INFO] timeouts import=${IMPORT_TIMEOUT}s regression=${REGRESSION_TIMEOUT}s export=${EXPORT_TIMEOUT}s"
 
 echo "[1/3] $(stamp) Importing project resources..."
-if ! timeout --foreground "${IMPORT_TIMEOUT}s" "$GODOT_BIN" --headless --editor --path . --quit-after 2; then
+if ! timeout --foreground "${IMPORT_TIMEOUT}s" "$GODOT_BIN" --headless --editor --path . --import; then
   rc=$?
   echo "[ERROR] $(stamp) Import failed or timed out after ${IMPORT_TIMEOUT}s (rc=${rc})." >&2
   diag
