@@ -304,3 +304,4 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP75_LEVEL_FULL_HEAL_GROWTH PASS")
+exec(Path("tools/apply_step76_shinobi_village.py").read_text(encoding="utf-8"), {})

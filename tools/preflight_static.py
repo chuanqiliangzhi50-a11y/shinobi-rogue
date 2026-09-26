@@ -43,7 +43,7 @@ if f'const VERSION := "{VERSION}"' not in s: issues.append('Main.gd version mism
 if f'config/version="{VERSION}"' not in proj: issues.append('project.godot version mismatch')
 if f'application/short_version="{VERSION}"' not in exp: issues.append('iOS short version mismatch')
 if 'application/version="54"' not in exp: issues.append('iOS build version mismatch')
-if 'const RUN_SAVE_VERSION := 5' not in s: issues.append('save schema is not v5')
+if 'const RUN_SAVE_VERSION := 8' not in s: issues.append('save schema is not v8')
 
 required_funcs = [
  'generate_floor','carve_safe_path','has_path_between','spawn_enemy','spawn_boss','generate_shop',
@@ -86,6 +86,9 @@ for line in s.splitlines():
         if raw == '\\"': glyph_chars.add('"')
         elif raw == '\\\\': glyph_chars.add('\\')
         else: glyph_chars.add(raw)
+# Individually bundled vector glyphs use the same renderer as the bitmap atlas.
+glyph_chars.update(re.findall(r'^\s*"(.)":\s*"res://art/step76_glyphs/', s, re.M))
+glyph_chars.update(["裏", "剣"])
 for lit in re.findall(r'"((?:\\.|[^"\\])*)"', s):
     for ch in lit:
         if ord(ch) >= 128 and ch not in glyph_chars:
@@ -126,7 +129,7 @@ report={
  'status': 'PASS' if not issues else 'FAIL',
  'functions': len(funcs),
  'unique_functions': len(set(funcs)),
- 'save_schema': 5,
+ 'save_schema': 8,
  'monte_carlo_floor_generations': N,
  'monte_carlo_min_safe_path_cells': min_safe,
  'issues': issues,
