@@ -30,11 +30,7 @@ load_anchor = '''\tif ResourceLoader.exists(TITLE_SCREEN_PATH):
 \t\ttitle_screen_texture = load(TITLE_SCREEN_PATH) as Texture2D
 \telse:
 \t\ttitle_screen_active = false'''
-load_new = load_anchor + '''
-\tfor scene_key in VILLAGE_SCENE_PATHS:
-\t\tvar scene_path := str(VILLAGE_SCENE_PATHS[scene_key])
-\t\tif ResourceLoader.exists(scene_path):
-\t\t\tvillage_scene_textures[scene_key] = load(scene_path) as Texture2D'''
+load_new = load_anchor
 if load_anchor not in s:
     raise SystemExit("STEP78 texture load anchor failed")
 s = s.replace(load_anchor, load_new, 1)
@@ -48,9 +44,23 @@ old_top = '''func draw_village_portrait() -> void:
 \tdraw_rect(Rect2(0, 0, 720, 1100), Color("#0a1017"))
 \tdraw_rect(Rect2(0, 0, 720, 198), Color("#111b27"))
 \tdraw_rect(Rect2(0, 195, 720, 3), Color("#8d7740"))'''
-new_top = '''func draw_village_portrait() -> void:
-\tvar scene_key := village_menu if village_scene_textures.has(village_menu) else "main"
-\tvar scene_texture: Texture2D = village_scene_textures.get(scene_key, null) as Texture2D
+new_top = '''func get_village_scene_texture(scene_key: String) -> Texture2D:
+\tif village_scene_textures.has(scene_key):
+\t\treturn village_scene_textures.get(scene_key, null) as Texture2D
+\tvar scene_path := str(VILLAGE_SCENE_PATHS.get(scene_key, VILLAGE_SCENE_PATHS["main"]))
+\tif not ResourceLoader.exists(scene_path):
+\t\treturn null
+\t# Mobile Safari has a tight memory limit. Keep only the picture in use.
+\tvillage_scene_textures.clear()
+\tvar scene_texture := load(scene_path) as Texture2D
+\tif scene_texture != null:
+\t\tvillage_scene_textures[scene_key] = scene_texture
+\treturn scene_texture
+
+
+func draw_village_portrait() -> void:
+\tvar scene_key := village_menu if VILLAGE_SCENE_PATHS.has(village_menu) else "main"
+\tvar scene_texture := get_village_scene_texture(scene_key)
 \tif scene_texture != null:
 \t\tdraw_texture_rect(scene_texture, Rect2(0, 0, 720, 1100), false)
 \telse:
@@ -98,6 +108,8 @@ required = [
     '"village_shop": "res://art/village_merchant.jpg"',
     '"warehouse": "res://art/village_warehouse.jpg"',
     "var village_scene_textures: Dictionary = {}",
+    "func get_village_scene_texture(scene_key: String) -> Texture2D:",
+    "village_scene_textures.clear()",
     "draw_texture_rect(scene_texture, Rect2(0, 0, 720, 1100), false)",
     "debug_test_village_illustration_contract()",
 ]

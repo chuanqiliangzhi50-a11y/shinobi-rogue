@@ -119,10 +119,6 @@ jobs:
               const keys = await caches.keys();
               await Promise.all(keys.map((key) => caches.delete(key)));
               await self.registration.unregister();
-              const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-              for (const client of windows) {
-                if ('navigate' in client) client.navigate(client.url);
-              }
             })());
           });
           self.addEventListener('fetch', (event) => {
@@ -144,23 +140,16 @@ jobs:
           cache_meta = '''<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
           <meta http-equiv="Pragma" content="no-cache">
           <meta http-equiv="Expires" content="0">'''
-          cleanup = '''<script>
-          (async () => {
-            try {
-              if ('serviceWorker' in navigator) {
-                const regs = await navigator.serviceWorker.getRegistrations();
-                for (const reg of regs) await reg.unregister();
-              }
-              if ('caches' in window) {
-                const keys = await caches.keys();
-                await Promise.all(keys.map((key) => caches.delete(key)));
-              }
-            } catch (e) {
-              console.warn('Legacy PWA cleanup:', e);
-            }
-          })();
-          </script>'''
-          s = s.replace('</head>', cache_meta + '\n' + cleanup + '\n</head>', 1)
+          # Unique package names already prevent stale data. Avoid touching an
+          # active service worker while Safari is starting WebAssembly.
+          s = s.replace('</head>', cache_meta + '\n</head>', 1)
+
+          # Keep the render buffer at the game's native portrait size. Safari
+          # otherwise allocates it at the iPhone's high pixel density, which can
+          # terminate the tab while textures and WebAssembly are loading.
+          s = s.replace('<canvas id="canvas">', '<canvas id="canvas" width="720" height="1100">', 1)
+          s = s.replace('"canvasResizePolicy":2', '"canvasResizePolicy":0', 1)
+          s = s.replace('#canvas {\n\tdisplay: block;\n}', '#canvas {\n\tdisplay: block;\n\twidth: 100vw;\n\theight: 100dvh;\n}', 1)
 
           progress = '<progress id="status-progress"></progress>'
           loading = progress + '''
@@ -178,6 +167,8 @@ jobs:
           test -s "web/${BUILD_ID}.wasm"
           grep -Fq "\"executable\":\"${BUILD_ID}\"" web/index.html
           grep -Fq "src=\"${BUILD_ID}.js\"" web/index.html
+          grep -Fq '"canvasResizePolicy":0' web/index.html
+          grep -Fq 'width="720" height="1100"' web/index.html
           if grep -Fq 'src="index.js"' web/index.html; then
             echo "Fixed-name JavaScript reference remains" >&2
             exit 1
