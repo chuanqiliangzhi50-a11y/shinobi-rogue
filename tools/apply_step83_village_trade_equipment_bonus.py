@@ -589,3 +589,5 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP83_VILLAGE_TRADE_EQUIPMENT_BONUS PASS")
+
+exec(Path("tools/apply_step84_shop_guard_and_enemy_motion.py").read_text(encoding="utf-8"), {})
