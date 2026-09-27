@@ -305,3 +305,5 @@ if s == original:
 p.write_text(s, encoding="utf-8")
 print("STEP89_FLOOR_TRAPS_CONTROLS PASS")
 
+exec(Path("tools/apply_step90_jutsu_learning_system.py").read_text(encoding="utf-8"), {})
+
