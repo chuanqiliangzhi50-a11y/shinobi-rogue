@@ -154,8 +154,8 @@ replace_func("enemy_idle_visual_offset", '''func enemy_idle_visual_offset(enemy:
 \tvar phase := float(absi(str(enemy.get("name", "敵")).hash()) % 628) / 100.0
 \tvar speed := 4.0 if bool(enemy.get("boss", false)) else 5.0
 \tvar step := sin(enemy_idle_anim_time * speed + phase)
-\tvar side := step * (0.55 if bool(enemy.get("boss", false)) else 0.9)
-\tvar grounded_drop := abs(step) * (0.35 if bool(enemy.get("boss", false)) else 0.7)
+\tvar side: float = step * (0.55 if bool(enemy.get("boss", false)) else 0.9)
+\tvar grounded_drop: float = abs(step) * (0.35 if bool(enemy.get("boss", false)) else 0.7)
 \tif int(enemy.get("bound", 0)) > 0: side *= 0.2
 \treturn Vector2(side, grounded_drop)''')
 
