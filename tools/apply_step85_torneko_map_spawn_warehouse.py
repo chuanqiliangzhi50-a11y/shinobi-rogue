@@ -505,3 +505,5 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP85_TORNEKO_MAP_SPAWN_WAREHOUSE PASS")
+
+exec(Path("tools/apply_step86_village_sources_and_attack_button.py").read_text(encoding="utf-8"), {})
