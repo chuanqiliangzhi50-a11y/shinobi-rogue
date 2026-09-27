@@ -360,3 +360,5 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP86_VILLAGE_SOURCES_ATTACK_BUTTON PASS")
+
+exec(Path("tools/apply_step87_enemy_directions_ranked_drops.py").read_text(encoding="utf-8"), {})
