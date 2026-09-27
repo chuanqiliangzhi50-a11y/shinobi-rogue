@@ -164,7 +164,7 @@ func jutsu_damage_positions(positions: Array[Vector2i], damage: int, label: Stri
 func cast_targeted_jutsu(name: String, target: Vector2i) -> void:
 \tif not jutsu_target_valid(name,target): message = "その場所には術を使えない。"; queue_redraw(); return
 \tif not spend_jutsu_energy(name): return
-\tvar delta := target-player; var dir := Vector2i(signi(delta.x),signi(delta.y)); var base_damage := maxi(1, attack_power + equipped_weapon_attack())
+\tvar delta := target-player; var dir := Vector2i(signi(delta.x),signi(delta.y)); var base_damage := maxi(1, attack_power + weapon_attack_bonus())
 \tif name == "火遁・火走り":
 \t\tvar cells: Array[Vector2i] = []
 \t\tfor step in range(1,6):
@@ -211,7 +211,7 @@ func cast_direct_jutsu(name: String) -> void:
 \t\tfor dy in range(-1,2):
 \t\t\tfor dx in range(-1,2):
 \t\t\t\tif dx != 0 or dy != 0: cells.append(player+Vector2i(dx,dy))
-\t\tvar hits := jutsu_damage_positions(cells,int(ceil((attack_power+equipped_weapon_attack())*1.2)),name); message = "%s！ %d体に命中。" % [name,hits]
+\t\tvar hits := jutsu_damage_positions(cells,int(ceil((attack_power+weapon_attack_bonus())*1.2)),name); message = "%s！ %d体に命中。" % [name,hits]
 \telif name == "隠れ身": hidden_mode = true; message = "隠れ身。1ターン敵に狙われない。"
 \telif name == "忍足": trap_sense_steps = 30; message = "忍足。30歩罠を見抜く。"
 \telif name == "疾風歩": swift_steps = 3; message = "疾風歩。3回素早く移動できる。"
