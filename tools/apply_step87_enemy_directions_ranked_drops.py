@@ -303,6 +303,10 @@ if suite_anchor not in s:
     raise SystemExit("STEP87 regression suite anchor failed")
 s = s.replace(suite_anchor, suite_anchor + "\t\tdebug_test_step87_contract(),\n", 1)
 
+# The function bodies above use raw strings for regex safety. Convert their
+# visible indentation escapes into real tabs before writing GDScript.
+s = s.replace("\\t", "\t")
+
 required = [
     "STEP87_ENEMY_DIRECTIONS_RANKED_DROPS_APPLIED",
     'enemy_8dir_atlas.png', 'boss_8dir_atlas.png',
@@ -317,3 +321,4 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP87_ENEMY_DIRECTIONS_RANKED_DROPS PASS")
+
