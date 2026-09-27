@@ -277,3 +277,5 @@ if s == original:
 p.write_text(s, encoding="utf-8")
 print("STEP88_IDLE_SHOP_IDENTIFICATION PASS")
 
+exec(Path("tools/apply_step89_floor_traps_controls.py").read_text(encoding="utf-8"), {})
+
