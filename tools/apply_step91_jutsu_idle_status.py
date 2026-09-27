@@ -233,3 +233,5 @@ if s == original:
 
 p.write_text(s, encoding="utf-8")
 print("STEP91_JUTSU_IDLE_STATUS PASS")
+
+exec(Path("tools/apply_step92_confirm_scroll_storage.py").read_text(encoding="utf-8"), {})
