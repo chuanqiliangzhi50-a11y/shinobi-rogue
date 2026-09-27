@@ -424,3 +424,5 @@ if s == original:
 p.write_text(s, encoding="utf-8")
 print("STEP90_JUTSU_LEARNING_SYSTEM PASS")
 
+# Continue with the discoverability, grounded idle, and equipment status pass.
+exec(Path("tools/apply_step91_jutsu_idle_status.py").read_text(encoding="utf-8"), {})
