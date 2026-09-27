@@ -322,3 +322,5 @@ if s == original:
 p.write_text(s, encoding="utf-8")
 print("STEP87_ENEMY_DIRECTIONS_RANKED_DROPS PASS")
 
+exec(Path("tools/apply_step88_idle_shop_identification.py").read_text(encoding="utf-8"), {})
+
