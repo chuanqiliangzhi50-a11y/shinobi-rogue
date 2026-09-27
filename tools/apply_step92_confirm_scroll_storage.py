@@ -455,6 +455,17 @@ s = s.replace(old_fusion_page, '''\t\tfor row in range(6):''', 1)
 s = s.replace('''\t\t\t\tif Rect2(48,430+row*58,624,50).has_point(pos): fuse_weapon_from_source(source,materials[material_row]); break
 \telif village_menu == "village_shop":''','''\t\t\tif Rect2(48,430+row*58,624,50).has_point(pos): fuse_weapon_from_source(source,materials[material_row]); break
 \telif village_menu == "village_shop":''',1)
+fusion_indent_bad = '''\t\tfor row in range(6):
+\t\t\t\tvar material_row := fusion_scroll_offset+row
+\t\t\t\tif material_row >= materials.size(): break
+\t\t\tif Rect2(48,430+row*58,624,50).has_point(pos): fuse_weapon_from_source(source,materials[material_row]); break'''
+fusion_indent_good = '''\t\tfor row in range(6):
+\t\t\tvar material_row := fusion_scroll_offset+row
+\t\t\tif material_row >= materials.size(): break
+\t\t\tif Rect2(48,430+row*58,624,50).has_point(pos): fuse_weapon_from_source(source,materials[material_row]); break'''
+if fusion_indent_bad not in s:
+    raise SystemExit("STEP92 fusion indentation normalization failed")
+s = s.replace(fusion_indent_bad, fusion_indent_good, 1)
 
 shop_page_input = '''\t\telif Rect2(48,286,624,48).has_point(pos): village_shop_toggle_mode()
 \t\telif Rect2(48,842,270,48).has_point(pos): village_shop_scroll(-VILLAGE_SHOP_VISIBLE_ROWS)
