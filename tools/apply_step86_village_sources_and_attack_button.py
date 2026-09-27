@@ -328,13 +328,13 @@ if test_anchor not in s:
     raise SystemExit("STEP86 test anchor failed")
 test_func = r'''
 func debug_test_step86_contract() -> String:
-	var old_menu := village_menu; var old_weapon := equipped_weapon; var old_inventory := inventory_items.duplicate(true); var old_warehouse := warehouse_items.duplicate(true); var old_states := weapon_fusion_states.duplicate(true)
-	village_menu = "weapon_fusion_storage"; equipped_weapon = "忍刀"; inventory_items = []; warehouse_items = [{"name":"双牙刀","identified":true,"count":1,"bonus":0}]; weapon_fusion_states = {}
+	var old_in_village := in_village; var old_menu := village_menu; var old_weapon := equipped_weapon; var old_inventory := inventory_items.duplicate(true); var old_warehouse := warehouse_items.duplicate(true); var old_states := weapon_fusion_states.duplicate(true)
+	in_village = true; village_menu = "weapon_fusion_storage"; equipped_weapon = "忍刀"; inventory_items = []; warehouse_items = [{"name":"双牙刀","identified":true,"count":1,"bonus":0}]; weapon_fusion_states = {}
 	fuse_weapon_from_source("warehouse",0)
 	var storage_fusion_ok := warehouse_items.is_empty() and weapon_has_effect("double_strike")
 	var source_ok := fusion_material_indices_for_source("bag").is_empty() and fusion_material_indices_for_source("warehouse").is_empty()
 	var attack_ok := has_method("attack_in_place")
-	village_menu = old_menu; equipped_weapon = old_weapon; inventory_items = old_inventory; warehouse_items = old_warehouse; weapon_fusion_states = old_states
+	in_village = old_in_village; village_menu = old_menu; equipped_weapon = old_weapon; inventory_items = old_inventory; warehouse_items = old_warehouse; weapon_fusion_states = old_states
 	return "PASS 倉庫選択合成攻撃" if storage_fusion_ok and source_ok and attack_ok else "FAIL 倉庫選択合成攻撃"
 '''
 s = s.replace(test_anchor, "\n" + test_func.rstrip() + test_anchor, 1)
